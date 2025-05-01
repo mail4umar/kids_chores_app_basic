@@ -10,9 +10,7 @@ import 'login_screen.dart';
 
 class ParentSetupScreen extends StatefulWidget {
   final bool addKidMode;
-
   const ParentSetupScreen({super.key, this.addKidMode = false});
-
   @override
   State<ParentSetupScreen> createState() => _ParentSetupScreenState();
 }
@@ -42,7 +40,6 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
   final TextEditingController _reducePointsController = TextEditingController();
   String _selectedChoreIcon = AppConstants.choreIconNames[0];
   String _selectedAvatar = AppConstants.avatars[0];
-
   @override
   void initState() {
     super.initState();
@@ -65,7 +62,8 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
     });
   }
 
-  void _loadKidData(String kidId, Map<String, dynamic> settings, List<Task> tasks) {
+  void _loadKidData(
+      String kidId, Map<String, dynamic> settings, List<Task> tasks) {
     _choreDailyTarget = settings['${kidId}_choreDailyTarget'] ?? 0;
     _choreWeeklyTarget = settings['${kidId}_choreWeeklyTarget'] ?? 0;
     _prayerDailyTarget = settings['${kidId}_prayerDailyTarget'] ?? 0;
@@ -76,10 +74,14 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
     _prayerPoints = settings['${kidId}_prayerPoints'] ?? 1;
     _studyPoints = settings['${kidId}_studyPoints'] ?? 2;
     _choreTasks = tasks
-        .where((t) => t.id.startsWith('${kidId}_chore_') && t.category == AppConstants.choreCategory)
+        .where((t) =>
+            t.id.startsWith('${kidId}_chore_') &&
+            t.category == AppConstants.choreCategory)
         .toList();
     _studyTasks = tasks
-        .where((t) => t.id.startsWith('${kidId}_study_') && t.category == AppConstants.studyCategory)
+        .where((t) =>
+            t.id.startsWith('${kidId}_study_') &&
+            t.category == AppConstants.studyCategory)
         .toList();
   }
 
@@ -136,8 +138,10 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Confirm Deletion', style: AppConstants.subheadingTextStyle),
-          content: Text('Are you sure you want to delete ${_kidToDelete!.name}\'s profile?'),
+          title: const Text('Confirm Deletion',
+              style: AppConstants.subheadingTextStyle),
+          content: Text(
+              'Are you sure you want to delete ${_kidToDelete!.name}\'s profile?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -169,7 +173,9 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
                 Navigator.pop(context);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('${_kidToDelete!.name}\'s profile deleted')),
+                    SnackBar(
+                        content:
+                            Text('${_kidToDelete!.name}\'s profile deleted')),
                   );
                 }
               },
@@ -181,7 +187,8 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
     }
   }
 
-  void _handleRedemptionRequest(Map<String, dynamic> request, bool accept) async {
+  void _handleRedemptionRequest(
+      Map<String, dynamic> request, bool accept) async {
     final kidId = request['kidId'];
     final points = request['points'] as int;
     setState(() {
@@ -191,18 +198,23 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
     if (accept) {
       final settings = await _dataService.fetchSettings();
       final currentPoints = settings['${kidId}_points'] ?? 0;
-      final newPoints = (currentPoints - points).clamp(0, double.infinity).toInt();
+      final newPoints =
+          (currentPoints - points).clamp(0, double.infinity).toInt();
       settings['${kidId}_points'] = newPoints;
       await _dataService.saveSettings(settings);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Approved ${request['request']} for ${request['kidName']}')),
+          SnackBar(
+              content: Text(
+                  'Approved ${request['request']} for ${request['kidName']}')),
         );
       }
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Rejected ${request['request']} for ${request['kidName']}')),
+          SnackBar(
+              content: Text(
+                  'Rejected ${request['request']} for ${request['kidName']}')),
         );
       }
     }
@@ -212,7 +224,8 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
     if (_selectedKid != null && _reducePoints > 0) {
       final settings = await _dataService.fetchSettings();
       final currentPoints = settings['${_selectedKid!.id}_points'] ?? 0;
-      final newPoints = (currentPoints - _reducePoints).clamp(0, double.infinity).toInt();
+      final newPoints =
+          (currentPoints - _reducePoints).clamp(0, double.infinity).toInt();
       settings['${_selectedKid!.id}_points'] = newPoints;
       await _dataService.saveSettings(settings);
       setState(() {
@@ -221,7 +234,9 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Reduced ${_selectedKid!.name}\'s points by $_reducePoints')),
+          SnackBar(
+              content: Text(
+                  'Reduced ${_selectedKid!.name}\'s points by $_reducePoints')),
         );
       }
     }
@@ -248,7 +263,6 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
       }
       return;
     }
-
     if (_selectedKid != null) {
       for (var task in _choreTasks) {
         await _dataService.addTask(task);
@@ -267,7 +281,8 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
       settings['${_selectedKid!.id}_chorePoints'] = _chorePoints;
       settings['${_selectedKid!.id}_prayerPoints'] = _prayerPoints;
       settings['${_selectedKid!.id}_studyPoints'] = _studyPoints;
-      settings['${_selectedKid!.id}_points'] = settings['${_selectedKid!.id}_points'] ?? 0;
+      settings['${_selectedKid!.id}_points'] =
+          settings['${_selectedKid!.id}_points'] ?? 0;
       await _dataService.saveSettings(settings);
     }
     if (mounted) {
@@ -294,17 +309,21 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (widget.addKidMode) ...[
-                const Text('Kid Name:', style: AppConstants.subheadingTextStyle),
+                const Text('Kid Name:',
+                    style: AppConstants.subheadingTextStyle),
                 TextField(
                   controller: _kidNameController,
-                  decoration: const InputDecoration(hintText: 'Enter kid\'s name'),
+                  decoration:
+                      const InputDecoration(hintText: 'Enter kid\'s name'),
                 ),
                 const SizedBox(height: 20),
-                const Text('Kid Avatar:', style: AppConstants.subheadingTextStyle),
+                const Text('Kid Avatar:',
+                    style: AppConstants.subheadingTextStyle),
                 SizedBox(
                   height: 100,
                   child: GridView.builder(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 3,
                       crossAxisSpacing: 10,
                       mainAxisSpacing: 10,
@@ -322,8 +341,9 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
                           radius: 30,
                           backgroundImage: AssetImage(avatar),
                           backgroundColor: _selectedAvatar == avatar
-                              ? AppConstants.primaryPink.withOpacity(0.3)
-                              : AppConstants.secondaryPink.withOpacity(0.2),
+                              ? AppConstants.primaryPink.withValues(alpha: 0.3)
+                              : AppConstants.secondaryPink
+                                  .withValues(alpha: 0.2),
                         ),
                       );
                     },
@@ -344,10 +364,12 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
                   maxLength: 4,
                   onChanged: (value) => _pin = value,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(hintText: 'Enter 4-digit PIN'),
+                  decoration:
+                      const InputDecoration(hintText: 'Enter 4-digit PIN'),
                 ),
                 const SizedBox(height: 20),
-                const Text('Select Kid:', style: AppConstants.subheadingTextStyle),
+                const Text('Select Kid:',
+                    style: AppConstants.subheadingTextStyle),
                 DropdownButton<User>(
                   value: _selectedKid,
                   hint: const Text('Choose a kid'),
@@ -368,7 +390,8 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
                   }).toList(),
                 ),
                 const SizedBox(height: 20),
-                const Text('Delete Kid Profile:', style: AppConstants.subheadingTextStyle),
+                const Text('Delete Kid Profile:',
+                    style: AppConstants.subheadingTextStyle),
                 DropdownButton<User>(
                   value: _kidToDelete,
                   hint: const Text('Select kid to delete'),
@@ -389,85 +412,109 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
                 Center(
                   child: ElevatedButton(
                     onPressed: _kidToDelete != null ? _deleteKid : null,
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    style:
+                        ElevatedButton.styleFrom(backgroundColor: Colors.red),
                     child: const Text('Delete Selected Kid'),
                   ),
                 ),
                 if (_selectedKid != null) ...[
                   const SizedBox(height: 20),
-                  const Text('Chore Settings:', style: AppConstants.subheadingTextStyle),
+                  const Text('Chore Settings:',
+                      style: AppConstants.subheadingTextStyle),
                   TextField(
                     keyboardType: TextInputType.number,
-                    onChanged: (value) => _choreDailyTarget = int.tryParse(value) ?? 0,
+                    onChanged: (value) =>
+                        _choreDailyTarget = int.tryParse(value) ?? 0,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(hintText: 'Chore daily target'),
+                    decoration:
+                        const InputDecoration(hintText: 'Chore daily target'),
                   ),
                   const SizedBox(height: 10),
                   TextField(
                     keyboardType: TextInputType.number,
-                    onChanged: (value) => _choreWeeklyTarget = int.tryParse(value) ?? 0,
+                    onChanged: (value) =>
+                        _choreWeeklyTarget = int.tryParse(value) ?? 0,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(hintText: 'Chore weekly target'),
+                    decoration:
+                        const InputDecoration(hintText: 'Chore weekly target'),
                   ),
                   const SizedBox(height: 10),
                   TextField(
                     keyboardType: TextInputType.number,
-                    onChanged: (value) => _chorePoints = int.tryParse(value) ?? 2,
+                    onChanged: (value) =>
+                        _chorePoints = int.tryParse(value) ?? 2,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(hintText: 'Points per chore (e.g., 2)'),
+                    decoration: const InputDecoration(
+                        hintText: 'Points per chore (e.g., 2)'),
                   ),
                   const SizedBox(height: 20),
-                  const Text('Prayer Settings:', style: AppConstants.subheadingTextStyle),
+                  const Text('Prayer Settings:',
+                      style: AppConstants.subheadingTextStyle),
                   TextField(
                     keyboardType: TextInputType.number,
-                    onChanged: (value) => _prayerDailyTarget = int.tryParse(value) ?? 0,
+                    onChanged: (value) =>
+                        _prayerDailyTarget = int.tryParse(value) ?? 0,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(hintText: 'Prayer daily target'),
+                    decoration:
+                        const InputDecoration(hintText: 'Prayer daily target'),
                   ),
                   const SizedBox(height: 10),
                   TextField(
                     keyboardType: TextInputType.number,
-                    onChanged: (value) => _prayerWeeklyTarget = int.tryParse(value) ?? 0,
+                    onChanged: (value) =>
+                        _prayerWeeklyTarget = int.tryParse(value) ?? 0,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(hintText: 'Prayer weekly target'),
+                    decoration:
+                        const InputDecoration(hintText: 'Prayer weekly target'),
                   ),
                   const SizedBox(height: 10),
                   TextField(
                     keyboardType: TextInputType.number,
-                    onChanged: (value) => _prayerPoints = int.tryParse(value) ?? 1,
+                    onChanged: (value) =>
+                        _prayerPoints = int.tryParse(value) ?? 1,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(hintText: 'Points per prayer (e.g., 1)'),
+                    decoration: const InputDecoration(
+                        hintText: 'Points per prayer (e.g., 1)'),
                   ),
                   const SizedBox(height: 20),
-                  const Text('Study Settings:', style: AppConstants.subheadingTextStyle),
+                  const Text('Study Settings:',
+                      style: AppConstants.subheadingTextStyle),
                   TextField(
                     keyboardType: TextInputType.number,
-                    onChanged: (value) => _studyDailyTarget = int.tryParse(value) ?? 0,
+                    onChanged: (value) =>
+                        _studyDailyTarget = int.tryParse(value) ?? 0,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(hintText: 'Study daily target'),
+                    decoration:
+                        const InputDecoration(hintText: 'Study daily target'),
                   ),
                   const SizedBox(height: 10),
                   TextField(
                     keyboardType: TextInputType.number,
-                    onChanged: (value) => _studyWeeklyTarget = int.tryParse(value) ?? 0,
+                    onChanged: (value) =>
+                        _studyWeeklyTarget = int.tryParse(value) ?? 0,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(hintText: 'Study weekly target'),
+                    decoration:
+                        const InputDecoration(hintText: 'Study weekly target'),
                   ),
                   const SizedBox(height: 10),
                   TextField(
                     keyboardType: TextInputType.number,
-                    onChanged: (value) => _studyPoints = int.tryParse(value) ?? 2,
+                    onChanged: (value) =>
+                        _studyPoints = int.tryParse(value) ?? 2,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(hintText: 'Points per study task (e.g., 2)'),
+                    decoration: const InputDecoration(
+                        hintText: 'Points per study task (e.g., 2)'),
                   ),
                   const SizedBox(height: 20),
-                  const Text('Chores:', style: AppConstants.subheadingTextStyle),
+                  const Text('Chores:',
+                      style: AppConstants.subheadingTextStyle),
                   Row(
                     children: [
                       Expanded(
                         child: TextField(
                           controller: _choreController,
-                          decoration: const InputDecoration(hintText: 'Enter chore'),
+                          decoration:
+                              const InputDecoration(hintText: 'Enter chore'),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -485,16 +532,19 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
                           );
                         }).toList(),
                       ),
-                      IconButton(icon: const Icon(Icons.add), onPressed: _addChore),
+                      IconButton(
+                          icon: const Icon(Icons.add), onPressed: _addChore),
                     ],
                   ),
                   if (_choreTasks.isNotEmpty) ...[
                     const SizedBox(height: 10),
                     ..._choreTasks.map((task) => ListTile(
-                          leading: Icon(AppConstants.choreIcons[task.iconName], color: AppConstants.primaryPink),
+                          leading: Icon(AppConstants.choreIcons[task.iconName],
+                              color: AppConstants.primaryPink),
                           title: Text(task.title),
                           trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: AppConstants.primaryPink),
+                            icon: const Icon(Icons.delete,
+                                color: AppConstants.primaryPink),
                             onPressed: () => _removeChore(task),
                           ),
                         )),
@@ -506,10 +556,12 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
                       Expanded(
                         child: TextField(
                           controller: _studyController,
-                          decoration: const InputDecoration(hintText: 'Enter study task'),
+                          decoration: const InputDecoration(
+                              hintText: 'Enter study task'),
                         ),
                       ),
-                      IconButton(icon: const Icon(Icons.add), onPressed: _addStudy),
+                      IconButton(
+                          icon: const Icon(Icons.add), onPressed: _addStudy),
                     ],
                   ),
                   if (_studyTasks.isNotEmpty) ...[
@@ -517,22 +569,28 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
                     ..._studyTasks.map((task) => ListTile(
                           title: Text(task.title),
                           trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: AppConstants.primaryPink),
+                            icon: const Icon(Icons.delete,
+                                color: AppConstants.primaryPink),
                             onPressed: () => _removeStudy(task),
                           ),
                         )),
                   ],
                   const SizedBox(height: 20),
-                  const Text('Reduce Points:', style: AppConstants.subheadingTextStyle),
+                  const Text('Reduce Points:',
+                      style: AppConstants.subheadingTextStyle),
                   Row(
                     children: [
                       Expanded(
                         child: TextField(
                           controller: _reducePointsController,
                           keyboardType: TextInputType.number,
-                          onChanged: (value) => _reducePoints = int.tryParse(value) ?? 0,
-                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                          decoration: const InputDecoration(hintText: 'Enter points to reduce'),
+                          onChanged: (value) =>
+                              _reducePoints = int.tryParse(value) ?? 0,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly
+                          ],
+                          decoration: const InputDecoration(
+                              hintText: 'Enter points to reduce'),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -543,24 +601,31 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  const Text('Redemption Requests:', style: AppConstants.subheadingTextStyle),
+                  const Text('Redemption Requests:',
+                      style: AppConstants.subheadingTextStyle),
                   if (_redemptionRequests.isEmpty)
-                    const Text('No pending requests', style: AppConstants.bodyTextStyle)
+                    const Text('No pending requests',
+                        style: AppConstants.bodyTextStyle)
                   else
                     ..._redemptionRequests.map((request) {
                       if (_kids.any((kid) => kid.id == request['kidId'])) {
                         return ListTile(
-                          title: Text('${request['kidName']}: ${request['request']} (${request['points']} points)'),
+                          title: Text(
+                              '${request['kidName']}: ${request['request']} (${request['points']} points)'),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.check, color: Colors.green),
-                                onPressed: () => _handleRedemptionRequest(request, true),
+                                icon: const Icon(Icons.check,
+                                    color: Colors.green),
+                                onPressed: () =>
+                                    _handleRedemptionRequest(request, true),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.close, color: Colors.red),
-                                onPressed: () => _handleRedemptionRequest(request, false),
+                                icon:
+                                    const Icon(Icons.close, color: Colors.red),
+                                onPressed: () =>
+                                    _handleRedemptionRequest(request, false),
                               ),
                             ],
                           ),
@@ -577,11 +642,11 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
                   ),
                 ],
               ],
-            ),
+            ],
           ),
         ),
       ),
-    )
+    );
   }
 
   @override
