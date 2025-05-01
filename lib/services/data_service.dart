@@ -2,38 +2,59 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../models/task.dart';
+import 'package:flutter/foundation.dart'; // For debugPrint
 
 class DataService {
   static const String _usersKey = 'users';
   static const String _tasksKey = 'tasks';
   static const String _settingsKey = 'settings';
   static const String _redemptionsKey = 'redemptions';
+  static const int _maxRetries = 3; // Retry failed writes
+  static const Duration _retryDelay = Duration(milliseconds: 100);
 
   Future<List<User>> fetchUsers() async {
     final prefs = await SharedPreferences.getInstance();
     final usersJson = prefs.getString(_usersKey);
-    if (usersJson == null) return [];
-    final List<dynamic> usersList = jsonDecode(usersJson);
-    return usersList.map((json) => User.fromJson(json)).toList();
+    if (usersJson == null) {
+      debugPrint('DataService: No users found in SharedPreferences');
+      return [];
+    }
+    try {
+      final List<dynamic> usersList = jsonDecode(usersJson);
+      final users = usersList.map((json) => User.fromJson(json)).toList();
+      debugPrint('DataService: Fetched ${users.length} users');
+      return users;
+    } catch (e) {
+      debugPrint('DataService: Error decoding users JSON: $e');
+      return [];
+    }
   }
 
-  Future<void> saveUsers(List<User> users) async {
-    final prefs = await SharedPreferences.getInstance();
-    final usersJson = jsonEncode(users.map((user) => user.toJson()).toList());
-    await prefs.setString(_usersKey, usersJson);
+  Future<bool> saveUsers(List<User> users) async {
+    return _saveWithRetry(_usersKey,
+        jsonEncode(users.map((user) => user.toJson()).toList()), 'users');
   }
 
   Future<List<Task>> fetchTasks() async {
     final prefs = await SharedPreferences.getInstance();
     final tasksJson = prefs.getString(_tasksKey);
-    if (tasksJson == null) return [];
-    final List<dynamic> tasksList = jsonDecode(tasksJson);
-    final tasks = tasksList.map((json) => Task.fromJson(json)).toList();
-    print('Fetched tasks: ${tasks.map((t) => t.id).toList()}'); // Debug
-    return tasks;
+    if (tasksJson == null) {
+      debugPrint('DataService: No tasks found in SharedPreferences');
+      return [];
+    }
+    try {
+      final List<dynamic> tasksList = jsonDecode(tasksJson);
+      final tasks = tasksList.map((json) => Task.fromJson(json)).toList();
+      debugPrint(
+          'DataService: Fetched ${tasks.length} tasks: ${tasks.map((t) => t.id).toList()}');
+      return tasks;
+    } catch (e) {
+      debugPrint('DataService: Error decoding tasks JSON: $e');
+      return [];
+    }
   }
 
-  Future<void> addTask(Task task) async {
+  Future<bool> addTask(Task task) async {
     final tasks = await fetchTasks();
     final existingIndex = tasks.indexWhere((t) => t.id == task.id);
     if (existingIndex != -1) {
@@ -41,71 +62,129 @@ class DataService {
     } else {
       tasks.add(task);
     }
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _tasksKey,
-      jsonEncode(tasks.map((t) => t.toJson()).toList()),
-    );
-    print('Saved task: ${task.id} - ${task.title}'); // Debug
+    final success = await _saveWithRetry(_tasksKey,
+        jsonEncode(tasks.map((t) => t.toJson()).toList()), 'task ${task.id}');
+    debugPrint(
+        'DataService: ${success ? 'Saved' : 'Failed to save'} task: ${task.id} - ${task.title}');
+    return success;
   }
 
-  Future<void> updateTask(Task task) async {
-    await addTask(task);
+  Future<bool> updateTask(Task task) async {
+    return addTask(task);
   }
 
   Future<Map<String, dynamic>> fetchSettings() async {
     final prefs = await SharedPreferences.getInstance();
     final settingsJson = prefs.getString(_settingsKey);
-    if (settingsJson == null) return {};
-    return jsonDecode(settingsJson);
+    if (settingsJson == null) {
+      debugPrint('DataService: No settings found in SharedPreferences');
+      return {};
+    }
+    try {
+      final settings = jsonDecode(settingsJson) as Map<String, dynamic>;
+      debugPrint('DataService: Fetched settings: $settings');
+      return settings;
+    } catch (e) {
+      debugPrint('DataService: Error decoding settings JSON: $e');
+      return {};
+    }
   }
 
-  Future<void> saveSettings(Map<String, dynamic> settings) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_settingsKey, jsonEncode(settings));
-    print('Saved settings: $settings'); // Debug
+  Future<bool> saveSettings(Map<String, dynamic> settings) async {
+    final success =
+        await _saveWithRetry(_settingsKey, jsonEncode(settings), 'settings');
+    debugPrint(
+        'DataService: ${success ? 'Saved' : 'Failed to save'} settings: $settings');
+    return success;
   }
 
   Future<List<Map<String, dynamic>>> fetchRedemptionRequests() async {
     final prefs = await SharedPreferences.getInstance();
     final redemptionsJson = prefs.getString(_redemptionsKey);
-    if (redemptionsJson == null) return [];
-    final List<dynamic> redemptionsList = jsonDecode(redemptionsJson);
-    return redemptionsList.cast<Map<String, dynamic>>();
+    if (redemptionsJson == null) {
+      debugPrint(
+          'DataService: No redemption requests found in SharedPreferences');
+      return [];
+    }
+    try {
+      final List<dynamic> redemptionsList = jsonDecode(redemptionsJson);
+      final redemptions = redemptionsList.cast<Map<String, dynamic>>();
+      debugPrint(
+          'DataService: Fetched ${redemptions.length} redemption requests');
+      return redemptions;
+    } catch (e) {
+      debugPrint('DataService: Error decoding redemptions JSON: $e');
+      return [];
+    }
   }
 
-  Future<void> saveRedemptionRequests(
-    List<Map<String, dynamic>> requests,
-  ) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_redemptionsKey, jsonEncode(requests));
-    print('Saved redemptions: $requests'); // Debug
+  Future<bool> saveRedemptionRequests(
+      List<Map<String, dynamic>> requests) async {
+    final success = await _saveWithRetry(
+        _redemptionsKey, jsonEncode(requests), 'redemption requests');
+    debugPrint(
+        'DataService: ${success ? 'Saved' : 'Failed to save'} redemption requests: $requests');
+    return success;
   }
 
-  Future<void> deleteKidData(String kidId) async {
-    final prefs = await SharedPreferences.getInstance();
-    // Remove user
-    final users = await fetchUsers();
-    final updatedUsers = users.where((u) => u.id != kidId).toList();
-    await saveUsers(updatedUsers);
-    // Remove tasks
-    final tasks = await fetchTasks();
-    final updatedTasks =
-        tasks.where((t) => !t.id.startsWith('${kidId}_')).toList();
-    await prefs.setString(
-      _tasksKey,
-      jsonEncode(updatedTasks.map((t) => t.toJson()).toList()),
-    );
-    // Remove settings
-    final settings = await fetchSettings();
-    final updatedSettings = Map<String, dynamic>.from(settings)
-      ..removeWhere((key, _) => key.startsWith('${kidId}_'));
-    await saveSettings(updatedSettings);
-    // Remove redemption requests
-    final redemptions = await fetchRedemptionRequests();
-    final updatedRedemptions =
-        redemptions.where((r) => r['kidId'] != kidId).toList();
-    await saveRedemptionRequests(updatedRedemptions);
-    print('Deleted data for kid: $kidId'); // Debug
+  Future<bool> deleteKidData(String kidId) async {
+    try {
+      // Fetch current data
+      final users = await fetchUsers();
+      final tasks = await fetchTasks();
+      final settings = await fetchSettings();
+      final redemptions = await fetchRedemptionRequests();
+
+      // Update data
+      final updatedUsers = users.where((u) => u.id != kidId).toList();
+      final updatedTasks =
+          tasks.where((t) => !t.id.startsWith('${kidId}_')).toList();
+      final updatedSettings = Map<String, dynamic>.from(settings)
+        ..removeWhere((key, _) => key.startsWith('${kidId}_'));
+      final updatedRedemptions =
+          redemptions.where((r) => r['kidId'] != kidId).toList();
+
+      // Save updated data with retries
+      final usersSuccess = await saveUsers(updatedUsers);
+      final tasksSuccess = await _saveWithRetry(
+          _tasksKey,
+          jsonEncode(updatedTasks.map((t) => t.toJson()).toList()),
+          'tasks after deletion');
+      final settingsSuccess = await saveSettings(updatedSettings);
+      final redemptionsSuccess =
+          await saveRedemptionRequests(updatedRedemptions);
+
+      final success =
+          usersSuccess && tasksSuccess && settingsSuccess && redemptionsSuccess;
+      debugPrint(
+          'DataService: ${success ? 'Successfully' : 'Failed to'} delete data for kid: $kidId');
+      return success;
+    } catch (e) {
+      debugPrint('DataService: Error deleting kid data: $e');
+      return false;
+    }
+  }
+
+  Future<bool> _saveWithRetry(String key, String value, String dataType) async {
+    for (int attempt = 1; attempt <= _maxRetries; attempt++) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final success = await prefs.setString(key, value);
+        if (success) {
+          return true;
+        }
+        debugPrint(
+            'DataService: Attempt $attempt failed to save $dataType to SharedPreferences');
+      } catch (e) {
+        debugPrint(
+            'DataService: Error on attempt $attempt saving $dataType: $e');
+      }
+      if (attempt < _maxRetries) {
+        await Future.delayed(_retryDelay);
+      }
+    }
+    debugPrint(
+        'DataService: Failed to save $dataType after $_maxRetries attempts');
+    return false;
   }
 }
