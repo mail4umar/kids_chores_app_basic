@@ -44,37 +44,60 @@ class _KidDashboardState extends State<KidDashboard>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _loadData();
+    _loadData().then((_) {
+      _checkAndResetDaily();
+    });
   }
 
   Future<void> _loadData() async {
     final tasks = await _dataService.fetchTasks();
     final settings = await _dataService.fetchSettings();
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    _choreDailyAchieved = _chores
+        .where((t) =>
+            t.isCompleted &&
+            t.completedAt != null &&
+            t.completedAt!.isAfter(today))
+        .length;
+
+    _prayerDailyAchieved = _prayers
+        .where((t) =>
+            t.isCompleted &&
+            t.completedAt != null &&
+            t.completedAt!.isAfter(today))
+        .length;
+
+    _studyDailyAchieved = _study
+        .where((t) =>
+            t.isCompleted &&
+            t.completedAt != null &&
+            t.completedAt!.isAfter(today))
+        .length;
     setState(() {
-      _chores =
-          tasks
-              .where(
-                (t) =>
-                    t.id.startsWith('${widget.user.id}_chore_') &&
-                    t.category == AppConstants.choreCategory,
-              )
-              .toList();
-      _prayers =
-          tasks
-              .where(
-                (t) =>
-                    t.id.startsWith('${widget.user.id}_prayer_') &&
-                    t.category == AppConstants.prayerCategory,
-              )
-              .toList();
-      _study =
-          tasks
-              .where(
-                (t) =>
-                    t.id.startsWith('${widget.user.id}_study_') &&
-                    t.category == AppConstants.studyCategory,
-              )
-              .toList();
+      _chores = tasks
+          .where(
+            (t) =>
+                t.id.startsWith('${widget.user.id}_chore_') &&
+                t.category == AppConstants.choreCategory,
+          )
+          .toList();
+      _prayers = tasks
+          .where(
+            (t) =>
+                t.id.startsWith('${widget.user.id}_prayer_') &&
+                t.category == AppConstants.prayerCategory,
+          )
+          .toList();
+      _study = tasks
+          .where(
+            (t) =>
+                t.id.startsWith('${widget.user.id}_study_') &&
+                t.category == AppConstants.studyCategory,
+          )
+          .toList();
       print(
         'Kid ${widget.user.name} - Chores: ${_chores.map((t) => t.title).toList()}',
       ); // Debug
@@ -106,10 +129,9 @@ class _KidDashboardState extends State<KidDashboard>
 
   void _toggleTaskCompletion(Task task, bool completed) {
     setState(() {
-      final taskList =
-          task.category == AppConstants.choreCategory
-              ? _chores
-              : task.category == AppConstants.prayerCategory
+      final taskList = task.category == AppConstants.choreCategory
+          ? _chores
+          : task.category == AppConstants.prayerCategory
               ? _prayers
               : _study;
       final index = taskList.indexWhere((t) => t.id == task.id);
@@ -121,17 +143,19 @@ class _KidDashboardState extends State<KidDashboard>
           category: task.category,
           isCompleted: completed,
           iconName: task.iconName,
+          completedAt: completed
+              ? DateTime.now()
+              : null, // Set timestamp when completing
         );
-        final pointsChange =
-            completed
-                ? (task.category == AppConstants.choreCategory
-                    ? _chorePoints
-                    : task.category == AppConstants.prayerCategory
+        final pointsChange = completed
+            ? (task.category == AppConstants.choreCategory
+                ? _chorePoints
+                : task.category == AppConstants.prayerCategory
                     ? _prayerPoints
                     : _studyPoints)
-                : -(task.category == AppConstants.choreCategory
-                    ? _chorePoints
-                    : task.category == AppConstants.prayerCategory
+            : -(task.category == AppConstants.choreCategory
+                ? _chorePoints
+                : task.category == AppConstants.prayerCategory
                     ? _prayerPoints
                     : _studyPoints);
         if (task.category == AppConstants.choreCategory) {
@@ -162,6 +186,7 @@ class _KidDashboardState extends State<KidDashboard>
           '${widget.user.id}_prayerPoints': _prayerPoints,
           '${widget.user.id}_studyPoints': _studyPoints,
         });
+        _dataService.updateTask(taskList[index]);
       }
     });
   }
@@ -169,17 +194,16 @@ class _KidDashboardState extends State<KidDashboard>
   void _showCongratulationDialog(Task task) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Yay!', style: AppConstants.subheadingTextStyle),
-            content: CongratulatoryWidget(task: task),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Awesome!'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('Yay!', style: AppConstants.subheadingTextStyle),
+        content: CongratulatoryWidget(task: task),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Awesome!'),
           ),
+        ],
+      ),
     );
   }
 
@@ -188,75 +212,104 @@ class _KidDashboardState extends State<KidDashboard>
     final TextEditingController pointsController = TextEditingController();
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text(
-              'Redeem Points',
-              style: AppConstants.subheadingTextStyle,
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: requestController,
-                  decoration: const InputDecoration(
-                    hintText: 'What do you want? (e.g., buy a toy)',
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: pointsController,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(
-                    hintText: 'Points to redeem (e.g., 60)',
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Redeem Points',
+          style: AppConstants.subheadingTextStyle,
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: requestController,
+              decoration: const InputDecoration(
+                hintText: 'What do you want? (e.g., buy a toy)',
               ),
-              TextButton(
-                onPressed: () async {
-                  final requestText = requestController.text;
-                  final points = int.tryParse(pointsController.text) ?? 0;
-                  if (requestText.isNotEmpty &&
-                      points > 0 &&
-                      points <= _points) {
-                    final request = {
-                      'kidId': widget.user.id,
-                      'kidName': widget.user.name,
-                      'request': requestText,
-                      'points': points,
-                    };
-                    final requests =
-                        await _dataService.fetchRedemptionRequests();
-                    requests.add(request);
-                    await _dataService.saveRedemptionRequests(requests);
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Redemption request sent!'),
-                        ),
-                      );
-                    }
-                    Navigator.pop(context);
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Invalid request or insufficient points'),
-                      ),
-                    );
-                  }
-                },
-                child: const Text('Submit'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: pointsController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(
+                hintText: 'Points to redeem (e.g., 60)',
               ),
-            ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
           ),
+          TextButton(
+            onPressed: () async {
+              final requestText = requestController.text;
+              final points = int.tryParse(pointsController.text) ?? 0;
+              if (requestText.isNotEmpty && points > 0 && points <= _points) {
+                final request = {
+                  'kidId': widget.user.id,
+                  'kidName': widget.user.name,
+                  'request': requestText,
+                  'points': points,
+                };
+                final requests = await _dataService.fetchRedemptionRequests();
+                requests.add(request);
+                await _dataService.saveRedemptionRequests(requests);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Redemption request sent!'),
+                    ),
+                  );
+                }
+                Navigator.pop(context);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Invalid request or insufficient points'),
+                  ),
+                );
+              }
+            },
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
     );
+  }
+
+  Future<void> _checkAndResetDaily() async {
+    final lastReset = await _dataService.getLastResetDate(widget.user.id);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    if (lastReset == null || lastReset.isBefore(today)) {
+      // It's a new day, reset daily counters
+      await _resetDailyProgress();
+      await _dataService.saveLastResetDate(
+          widget.user.id, now.toString() as DateTime);
+    }
+  }
+
+  Future<void> _resetDailyProgress() async {
+    setState(() {
+      _choreDailyAchieved = 0;
+      _prayerDailyAchieved = 0;
+      _studyDailyAchieved = 0;
+    });
+
+    await _dataService.saveSettings({
+      '${widget.user.id}_choreDailyAchieved': 0,
+      '${widget.user.id}_prayerDailyAchieved': 0,
+      '${widget.user.id}_studyDailyAchieved': 0,
+      // Keep all other settings
+      '${widget.user.id}_choreWeeklyAchieved': _choreWeeklyAchieved,
+      '${widget.user.id}_prayerWeeklyAchieved': _prayerWeeklyAchieved,
+      '${widget.user.id}_studyWeeklyAchieved': _studyWeeklyAchieved,
+      '${widget.user.id}_points': _points,
+      // ... other settings
+    });
   }
 
   Widget _buildTaskTab(
@@ -311,20 +364,21 @@ class _KidDashboardState extends State<KidDashboard>
           const Divider(color: AppConstants.secondaryPink),
           tasks.isEmpty
               ? const Center(
-                child: Text('No tasks yet!', style: AppConstants.bodyTextStyle),
-              )
+                  child:
+                      Text('No tasks yet!', style: AppConstants.bodyTextStyle),
+                )
               : ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: tasks.length,
-                itemBuilder: (context, index) {
-                  final task = tasks[index];
-                  return TaskTile(
-                    task: task,
-                    onTaskCompletionChanged: _toggleTaskCompletion,
-                  );
-                },
-              ),
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: tasks.length,
+                  itemBuilder: (context, index) {
+                    final task = tasks[index];
+                    return TaskTile(
+                      task: task,
+                      onTaskCompletionChanged: _toggleTaskCompletion,
+                    );
+                  },
+                ),
         ],
       ),
     );

@@ -5,6 +5,8 @@ class Task {
   final String category;
   final bool isCompleted;
   final String? iconName;
+  final DateTime?
+      completedAt; // Added this field to track when task was completed
 
   Task({
     required this.id,
@@ -13,7 +15,29 @@ class Task {
     required this.category,
     this.isCompleted = false,
     this.iconName,
+    this.completedAt, // Initialize as optional
   });
+
+  // Added a copyWith method for easier updates
+  Task copyWith({
+    String? id,
+    String? title,
+    String? description,
+    String? category,
+    bool? isCompleted,
+    String? iconName,
+    DateTime? completedAt,
+  }) {
+    return Task(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      category: category ?? this.category,
+      isCompleted: isCompleted ?? this.isCompleted,
+      iconName: iconName ?? this.iconName,
+      completedAt: completedAt ?? this.completedAt,
+    );
+  }
 
   factory Task.fromJson(Map<String, dynamic> json) {
     return Task(
@@ -23,6 +47,9 @@ class Task {
       category: json['category'],
       isCompleted: json['isCompleted'] ?? false,
       iconName: json['iconName'],
+      completedAt: json['completedAt'] != null
+          ? DateTime.parse(json['completedAt'])
+          : null,
     );
   }
 
@@ -34,6 +61,7 @@ class Task {
       'category': category,
       'isCompleted': isCompleted,
       'iconName': iconName,
+      'completedAt': completedAt?.toIso8601String(),
     };
   }
 }

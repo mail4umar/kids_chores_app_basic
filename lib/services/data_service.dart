@@ -9,6 +9,10 @@ class DataService {
   static const String _tasksKey = 'tasks';
   static const String _settingsKey = 'settings';
   static const String _redemptionsKey = 'redemptions';
+  static const String _lastResetDateKey =
+      'lastResetDate'; // New key for tracking resets
+  static const String _lastWeeklyResetDateKey =
+      'lastWeeklyResetDate'; // For weekly resets
   static const int _maxRetries = 3; // Retry failed writes
   static const Duration _retryDelay = Duration(milliseconds: 100);
 
@@ -161,6 +165,94 @@ class DataService {
       return success;
     } catch (e) {
       debugPrint('DataService: Error deleting kid data: $e');
+      return false;
+    }
+  }
+
+  // New method to get the last reset date for a specific kid
+  Future<DateTime?> getLastResetDate(String kidId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final dateStr = prefs.getString('${_lastResetDateKey}_$kidId');
+    if (dateStr == null) {
+      debugPrint('DataService: No last reset date found for kid: $kidId');
+      return null;
+    }
+    try {
+      return DateTime.parse(dateStr);
+    } catch (e) {
+      debugPrint('DataService: Error parsing last reset date: $e');
+      return null;
+    }
+  }
+
+  // New method to save the last reset date for a specific kid
+  Future<bool> saveLastResetDate(String kidId, DateTime date) async {
+    final success = await _saveWithRetry(
+      '${_lastResetDateKey}_$kidId',
+      date.toIso8601String(),
+      'last reset date for $kidId',
+    );
+    debugPrint(
+        'DataService: ${success ? 'Saved' : 'Failed to save'} last reset date for kid: $kidId');
+    return success;
+  }
+
+  // New method to get the last weekly reset date for a specific kid
+  Future<DateTime?> getLastWeeklyResetDate(String kidId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final dateStr = prefs.getString('${_lastWeeklyResetDateKey}_$kidId');
+    if (dateStr == null) {
+      debugPrint(
+          'DataService: No last weekly reset date found for kid: $kidId');
+      return null;
+    }
+    try {
+      return DateTime.parse(dateStr);
+    } catch (e) {
+      debugPrint('DataService: Error parsing last weekly reset date: $e');
+      return null;
+    }
+  }
+
+  // New method to save the last weekly reset date for a specific kid
+  Future<bool> saveLastWeeklyResetDate(String kidId, DateTime date) async {
+    final success = await _saveWithRetry(
+      '${_lastWeeklyResetDateKey}_$kidId',
+      date.toIso8601String(),
+      'last weekly reset date for $kidId',
+    );
+    debugPrint(
+        'DataService: ${success ? 'Saved' : 'Failed to save'} last weekly reset date for kid: $kidId');
+    return success;
+  }
+
+  // New method to get tasks completed today for a specific kid and category
+  Future<List<Task>> getTasksCompletedToday(
+      String kidId, String category) async {
+    final tasks = await fetchTasks();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    return tasks
+        .where((task) =>
+            task.id.startsWith('${kidId}_') &&
+            task.category == category &&
+            task.isCompleted &&
+            task.completedAt != null &&
+            task.completedAt!
+                .isAfter(today.subtract(const Duration(seconds: 1))))
+        .toList();
+  }
+
+  // New method to reset daily task completion status
+  Future<bool> resetDailyTaskCompletion(String kidId) async {
+    debugPrint('DataService: Resetting daily task completion for kid: $kidId');
+    try {
+      // We're not actually resetting the task completion status
+      // This is just tracking that we've done the reset
+      return await saveLastResetDate(kidId, DateTime.now());
+    } catch (e) {
+      debugPrint('DataService: Error resetting daily task completion: $e');
       return false;
     }
   }
