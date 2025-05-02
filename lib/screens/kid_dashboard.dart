@@ -46,36 +46,15 @@ class _KidDashboardState extends State<KidDashboard>
     _tabController = TabController(length: 3, vsync: this);
     _loadData().then((_) {
       _checkAndResetDaily();
+      _checkAndResetWeekly();
     });
   }
 
   Future<void> _loadData() async {
     final tasks = await _dataService.fetchTasks();
     final settings = await _dataService.fetchSettings();
+    final progress = await _dataService.fetchProgress(widget.user.id);
 
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    _choreDailyAchieved = _chores
-        .where((t) =>
-            t.isCompleted &&
-            t.completedAt != null &&
-            t.completedAt!.isAfter(today))
-        .length;
-
-    _prayerDailyAchieved = _prayers
-        .where((t) =>
-            t.isCompleted &&
-            t.completedAt != null &&
-            t.completedAt!.isAfter(today))
-        .length;
-
-    _studyDailyAchieved = _study
-        .where((t) =>
-            t.isCompleted &&
-            t.completedAt != null &&
-            t.completedAt!.isAfter(today))
-        .length;
     setState(() {
       _chores = tasks
           .where(
@@ -98,15 +77,8 @@ class _KidDashboardState extends State<KidDashboard>
                 t.category == AppConstants.studyCategory,
           )
           .toList();
-      print(
-        'Kid ${widget.user.name} - Chores: ${_chores.map((t) => t.title).toList()}',
-      ); // Debug
-      print(
-        'Kid ${widget.user.name} - Prayers: ${_prayers.map((t) => t.title).toList()}',
-      ); // Debug
-      print(
-        'Kid ${widget.user.name} - Study: ${_study.map((t) => t.title).toList()}',
-      ); // Debug
+
+      // Load settings
       _choreDailyTarget = settings['${widget.user.id}_choreDailyTarget'] ?? 0;
       _choreWeeklyTarget = settings['${widget.user.id}_choreWeeklyTarget'] ?? 0;
       _prayerDailyTarget = settings['${widget.user.id}_prayerDailyTarget'] ?? 0;
@@ -118,12 +90,27 @@ class _KidDashboardState extends State<KidDashboard>
       _prayerPoints = settings['${widget.user.id}_prayerPoints'] ?? 1;
       _studyPoints = settings['${widget.user.id}_studyPoints'] ?? 2;
       _points = settings['${widget.user.id}_points'] ?? 0;
-      _choreDailyAchieved = _chores.where((t) => t.isCompleted).length;
-      _choreWeeklyAchieved = _choreDailyAchieved;
-      _prayerDailyAchieved = _prayers.where((t) => t.isCompleted).length;
-      _prayerWeeklyAchieved = _prayerDailyAchieved;
-      _studyDailyAchieved = _study.where((t) => t.isCompleted).length;
-      _studyWeeklyAchieved = _studyDailyAchieved;
+
+      // Load progress
+      _choreDailyAchieved =
+          progress['${widget.user.id}_choreDailyAchieved'] ?? 0;
+      _choreWeeklyAchieved =
+          progress['${widget.user.id}_choreWeeklyAchieved'] ?? 0;
+      _prayerDailyAchieved =
+          progress['${widget.user.id}_prayerDailyAchieved'] ?? 0;
+      _prayerWeeklyAchieved =
+          progress['${widget.user.id}_prayerWeeklyAchieved'] ?? 0;
+      _studyDailyAchieved =
+          progress['${widget.user.id}_studyDailyAchieved'] ?? 0;
+      _studyWeeklyAchieved =
+          progress['${widget.user.id}_studyWeeklyAchieved'] ?? 0;
+
+      print(
+        'Kid ${widget.user.name} - Chores: ${_chores.map((t) => t.title).toList()}',
+      ); // Debug
+      print(
+        'Kid ${widget.user.name} - Study: ${_study.map((t) => t.title).toList()}',
+      ); // Debug
     });
   }
 
@@ -143,10 +130,9 @@ class _KidDashboardState extends State<KidDashboard>
           category: task.category,
           isCompleted: completed,
           iconName: task.iconName,
-          completedAt: completed
-              ? DateTime.now()
-              : null, // Set timestamp when completing
+          completedAt: completed ? DateTime.now() : null,
         );
+
         final pointsChange = completed
             ? (task.category == AppConstants.choreCategory
                 ? _chorePoints
@@ -158,6 +144,7 @@ class _KidDashboardState extends State<KidDashboard>
                 : task.category == AppConstants.prayerCategory
                     ? _prayerPoints
                     : _studyPoints);
+
         if (task.category == AppConstants.choreCategory) {
           _choreDailyAchieved += completed ? 1 : -1;
           _choreWeeklyAchieved += completed ? 1 : -1;
@@ -170,10 +157,18 @@ class _KidDashboardState extends State<KidDashboard>
         }
         _points += pointsChange;
         _points = _points.clamp(0, double.infinity).toInt();
-        if (completed) {
-          _showCongratulationDialog(task);
-        }
-        _dataService.updateTask(taskList[index]);
+
+        // Save progress
+        _dataService.saveProgress(widget.user.id, {
+          '${widget.user.id}_choreDailyAchieved': _choreDailyAchieved,
+          '${widget.user.id}_choreWeeklyAchieved': _choreWeeklyAchieved,
+          '${widget.user.id}_prayerDailyAchieved': _prayerDailyAchieved,
+          '${widget.user.id}_prayerWeeklyAchieved': _prayerWeeklyAchieved,
+          '${widget.user.id}_studyDailyAchieved': _studyDailyAchieved,
+          '${widget.user.id}_studyWeeklyAchieved': _studyWeeklyAchieved,
+        });
+
+        // Save settings
         _dataService.saveSettings({
           '${widget.user.id}_points': _points,
           '${widget.user.id}_choreDailyTarget': _choreDailyTarget,
@@ -186,7 +181,11 @@ class _KidDashboardState extends State<KidDashboard>
           '${widget.user.id}_prayerPoints': _prayerPoints,
           '${widget.user.id}_studyPoints': _studyPoints,
         });
+
         _dataService.updateTask(taskList[index]);
+        if (completed) {
+          _showCongratulationDialog(task);
+        }
       }
     });
   }
@@ -287,8 +286,7 @@ class _KidDashboardState extends State<KidDashboard>
     if (lastReset == null || lastReset.isBefore(today)) {
       // It's a new day, reset daily counters
       await _resetDailyProgress();
-      await _dataService.saveLastResetDate(
-          widget.user.id, now.toString() as DateTime);
+      await _dataService.saveLastResetDate(widget.user.id, now);
     }
   }
 
@@ -299,16 +297,57 @@ class _KidDashboardState extends State<KidDashboard>
       _studyDailyAchieved = 0;
     });
 
-    await _dataService.saveSettings({
+    await _dataService.saveProgress(widget.user.id, {
       '${widget.user.id}_choreDailyAchieved': 0,
-      '${widget.user.id}_prayerDailyAchieved': 0,
-      '${widget.user.id}_studyDailyAchieved': 0,
-      // Keep all other settings
       '${widget.user.id}_choreWeeklyAchieved': _choreWeeklyAchieved,
+      '${widget.user.id}_prayerDailyAchieved': 0,
       '${widget.user.id}_prayerWeeklyAchieved': _prayerWeeklyAchieved,
+      '${widget.user.id}_studyDailyAchieved': 0,
       '${widget.user.id}_studyWeeklyAchieved': _studyWeeklyAchieved,
+    });
+
+    // Update settings for points and targets
+    await _dataService.saveSettings({
       '${widget.user.id}_points': _points,
-      // ... other settings
+      '${widget.user.id}_choreDailyTarget': _choreDailyTarget,
+      '${widget.user.id}_choreWeeklyTarget': _choreWeeklyTarget,
+      '${widget.user.id}_prayerDailyTarget': _prayerDailyTarget,
+      '${widget.user.id}_prayerWeeklyTarget': _prayerWeeklyTarget,
+      '${widget.user.id}_studyDailyTarget': _studyDailyTarget,
+      '${widget.user.id}_studyWeeklyTarget': _studyWeeklyTarget,
+      '${widget.user.id}_chorePoints': _chorePoints,
+      '${widget.user.id}_prayerPoints': _prayerPoints,
+      '${widget.user.id}_studyPoints': _studyPoints,
+    });
+  }
+
+  Future<void> _checkAndResetWeekly() async {
+    final lastWeeklyReset =
+        await _dataService.getLastWeeklyResetDate(widget.user.id);
+    final now = DateTime.now();
+    final monday = now.subtract(Duration(days: now.weekday - 1));
+    final weekStart = DateTime(monday.year, monday.month, monday.day);
+
+    if (lastWeeklyReset == null || lastWeeklyReset.isBefore(weekStart)) {
+      await _resetWeeklyProgress();
+      await _dataService.saveLastWeeklyResetDate(widget.user.id, now);
+    }
+  }
+
+  Future<void> _resetWeeklyProgress() async {
+    setState(() {
+      _choreWeeklyAchieved = 0;
+      _prayerWeeklyAchieved = 0;
+      _studyWeeklyAchieved = 0;
+    });
+
+    await _dataService.saveProgress(widget.user.id, {
+      '${widget.user.id}_choreDailyAchieved': _choreDailyAchieved,
+      '${widget.user.id}_choreWeeklyAchieved': 0,
+      '${widget.user.id}_prayerDailyAchieved': _prayerDailyAchieved,
+      '${widget.user.id}_prayerWeeklyAchieved': 0,
+      '${widget.user.id}_studyDailyAchieved': _studyDailyAchieved,
+      '${widget.user.id}_studyWeeklyAchieved': 0,
     });
   }
 
@@ -357,7 +396,6 @@ class _KidDashboardState extends State<KidDashboard>
                 value: progress,
                 backgroundColor: Colors.transparent,
                 valueColor: AlwaysStoppedAnimation(AppConstants.primaryPink),
-                // Custom gradient (requires custom painter for true gradient)
               ),
             ),
           ),
@@ -403,6 +441,10 @@ class _KidDashboardState extends State<KidDashboard>
       ),
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.all(AppConstants.defaultPadding),
+            child: WeekDayIndicator(currentDate: DateTime.now()),
+          ),
           Padding(
             padding: const EdgeInsets.all(AppConstants.defaultPadding),
             child: Row(
@@ -471,5 +513,84 @@ class _KidDashboardState extends State<KidDashboard>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+}
+
+class WeekDayIndicator extends StatelessWidget {
+  final DateTime currentDate;
+
+  const WeekDayIndicator({super.key, required this.currentDate});
+
+  @override
+  Widget build(BuildContext context) {
+    final days = _getWeekDays();
+    final currentDay = currentDate.weekday;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: days.asMap().entries.map((entry) {
+        final index = entry.key;
+        final date = entry.value;
+        final isCurrentDay = index == currentDay - 1;
+
+        return Column(
+          children: [
+            Container(
+              width: 35,
+              height: 35,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color:
+                    isCurrentDay ? AppConstants.primaryPink : Colors.grey[300]!,
+              ),
+              child: Center(
+                child: Text(
+                  _getDayName(index + 1),
+                  style: TextStyle(
+                    color: isCurrentDay ? Colors.white : Colors.black,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              date.day.toString(),
+              style: TextStyle(
+                color: isCurrentDay ? AppConstants.primaryPink : Colors.black,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        );
+      }).toList(),
+    );
+  }
+
+  List<DateTime> _getWeekDays() {
+    final now = currentDate;
+    final monday = now.subtract(Duration(days: now.weekday - 1));
+    return List.generate(7, (index) => monday.add(Duration(days: index)));
+  }
+
+  String _getDayName(int weekday) {
+    switch (weekday) {
+      case 1:
+        return 'Mon';
+      case 2:
+        return 'Tue';
+      case 3:
+        return 'Wed';
+      case 4:
+        return 'Thu';
+      case 5:
+        return 'Fri';
+      case 6:
+        return 'Sat';
+      case 7:
+        return 'Sun';
+      default:
+        return '';
+    }
   }
 }

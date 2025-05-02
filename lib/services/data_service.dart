@@ -279,4 +279,40 @@ class DataService {
         'DataService: Failed to save $dataType after $_maxRetries attempts');
     return false;
   }
+
+  Future<Map<String, dynamic>> fetchProgress(String userId) async {
+    // Assuming you're using SharedPreferences or similar
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      '${userId}_choreDailyAchieved':
+          prefs.getInt('${userId}_choreDailyAchieved') ?? 0,
+      '${userId}_choreWeeklyAchieved':
+          prefs.getInt('${userId}_choreWeeklyAchieved') ?? 0,
+      '${userId}_prayerDailyAchieved':
+          prefs.getInt('${userId}_prayerDailyAchieved') ?? 0,
+      '${userId}_prayerWeeklyAchieved':
+          prefs.getInt('${userId}_prayerWeeklyAchieved') ?? 0,
+      '${userId}_studyDailyAchieved':
+          prefs.getInt('${userId}_studyDailyAchieved') ?? 0,
+      '${userId}_studyWeeklyAchieved':
+          prefs.getInt('${userId}_studyWeeklyAchieved') ?? 0,
+    };
+  }
+
+  Future<void> saveProgress(
+      String userId, Map<String, dynamic> progress) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('${userId}_choreDailyAchieved',
+        progress['${userId}_choreDailyAchieved']);
+    await prefs.setInt('${userId}_choreWeeklyAchieved',
+        progress['${userId}_choreWeeklyAchieved']);
+    await prefs.setInt('${userId}_prayerDailyAchieved',
+        progress['${userId}_prayerDailyAchieved']);
+    await prefs.setInt('${userId}_prayerWeeklyAchieved',
+        progress['${userId}_prayerWeeklyAchieved']);
+    await prefs.setInt('${userId}_studyDailyAchieved',
+        progress['${userId}_studyDailyAchieved']);
+    await prefs.setInt('${userId}_studyWeeklyAchieved',
+        progress['${userId}_studyWeeklyAchieved']);
+  }
 }
