@@ -35,9 +35,9 @@ class _KidDashboardState extends State<KidDashboard>
   int _prayerWeeklyTarget = 0;
   int _studyDailyTarget = 0;
   int _studyWeeklyTarget = 0;
-  int _chorePoints = 2;
+  int _chorePoints = 1;
   int _prayerPoints = 1;
-  int _studyPoints = 2;
+  int _studyPoints = 1;
   int _points = 0;
 
   @override
@@ -114,7 +114,7 @@ class _KidDashboardState extends State<KidDashboard>
     });
   }
 
-  void _toggleTaskCompletion(Task task, bool completed) {
+  void _toggleTaskCompletion(Task task, bool completed) async {
     setState(() {
       final taskList = task.category == AppConstants.choreCategory
           ? _chores
@@ -194,7 +194,7 @@ class _KidDashboardState extends State<KidDashboard>
         _points += pointsChange;
         _points = _points.clamp(0, double.infinity).toInt();
 
-        // Save progress
+        // Save progress - FIXED: Use the individual progress saving method
         _dataService.saveProgress(widget.user.id, {
           '${widget.user.id}_choreDailyAchieved': _choreDailyAchieved,
           '${widget.user.id}_choreWeeklyAchieved': _choreWeeklyAchieved,
@@ -204,19 +204,8 @@ class _KidDashboardState extends State<KidDashboard>
           '${widget.user.id}_studyWeeklyAchieved': _studyWeeklyAchieved,
         });
 
-        // Save settings
-        _dataService.saveSettings({
-          '${widget.user.id}_points': _points,
-          '${widget.user.id}_choreDailyTarget': _choreDailyTarget,
-          '${widget.user.id}_choreWeeklyTarget': _choreWeeklyTarget,
-          '${widget.user.id}_prayerDailyTarget': _prayerDailyTarget,
-          '${widget.user.id}_prayerWeeklyTarget': _prayerWeeklyTarget,
-          '${widget.user.id}_studyDailyTarget': _studyDailyTarget,
-          '${widget.user.id}_studyWeeklyTarget': _studyWeeklyTarget,
-          '${widget.user.id}_chorePoints': _chorePoints,
-          '${widget.user.id}_prayerPoints': _prayerPoints,
-          '${widget.user.id}_studyPoints': _studyPoints,
-        });
+        // FIX: Update individual settings one by one to avoid overwriting other kids' settings
+        _updateKidSettings();
 
         _dataService.updateTask(taskList[index]);
 
@@ -227,18 +216,41 @@ class _KidDashboardState extends State<KidDashboard>
     });
   }
 
+  // New method to update settings safely without affecting other kids
+  Future<void> _updateKidSettings() async {
+    // Get existing settings first
+    final currentSettings = await _dataService.fetchSettings();
+
+    // Update only this kid's settings
+    currentSettings['${widget.user.id}_points'] = _points;
+    currentSettings['${widget.user.id}_choreDailyTarget'] = _choreDailyTarget;
+    currentSettings['${widget.user.id}_choreWeeklyTarget'] = _choreWeeklyTarget;
+    currentSettings['${widget.user.id}_prayerDailyTarget'] = _prayerDailyTarget;
+    currentSettings['${widget.user.id}_prayerWeeklyTarget'] =
+        _prayerWeeklyTarget;
+    currentSettings['${widget.user.id}_studyDailyTarget'] = _studyDailyTarget;
+    currentSettings['${widget.user.id}_studyWeeklyTarget'] = _studyWeeklyTarget;
+    currentSettings['${widget.user.id}_chorePoints'] = _chorePoints;
+    currentSettings['${widget.user.id}_prayerPoints'] = _prayerPoints;
+    currentSettings['${widget.user.id}_studyPoints'] = _studyPoints;
+
+    // Save all settings back
+    await _dataService.saveSettings(currentSettings);
+  }
+
   void _showCongratulationDialog(Task task, String message) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(message, style: AppConstants.subheadingTextStyle),
-        content: CongratulatoryWidget(task: task),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Awesome!'),
-          ),
-        ],
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        elevation: 8,
+        child: CongratulatoryWidget(
+          task: task,
+          message: message,
+        ),
       ),
     );
   }
@@ -292,6 +304,11 @@ class _KidDashboardState extends State<KidDashboard>
                 final requests = await _dataService.fetchRedemptionRequests();
                 requests.add(request);
                 await _dataService.saveRedemptionRequests(requests);
+
+                // FIXED: Update points in settings after redemption
+                _points -= points;
+                await _updateKidSettings();
+
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -334,27 +351,11 @@ class _KidDashboardState extends State<KidDashboard>
       _studyDailyAchieved = 0;
     });
 
+    // FIX: Only update progress for this kid, not settings
     await _dataService.saveProgress(widget.user.id, {
       '${widget.user.id}_choreDailyAchieved': 0,
-      '${widget.user.id}_choreWeeklyAchieved': _choreWeeklyAchieved,
       '${widget.user.id}_prayerDailyAchieved': 0,
-      '${widget.user.id}_prayerWeeklyAchieved': _prayerWeeklyAchieved,
       '${widget.user.id}_studyDailyAchieved': 0,
-      '${widget.user.id}_studyWeeklyAchieved': _studyWeeklyAchieved,
-    });
-
-    // Update settings for points and targets
-    await _dataService.saveSettings({
-      '${widget.user.id}_points': _points,
-      '${widget.user.id}_choreDailyTarget': _choreDailyTarget,
-      '${widget.user.id}_choreWeeklyTarget': _choreWeeklyTarget,
-      '${widget.user.id}_prayerDailyTarget': _prayerDailyTarget,
-      '${widget.user.id}_prayerWeeklyTarget': _prayerWeeklyTarget,
-      '${widget.user.id}_studyDailyTarget': _studyDailyTarget,
-      '${widget.user.id}_studyWeeklyTarget': _studyWeeklyTarget,
-      '${widget.user.id}_chorePoints': _chorePoints,
-      '${widget.user.id}_prayerPoints': _prayerPoints,
-      '${widget.user.id}_studyPoints': _studyPoints,
     });
   }
 
@@ -378,12 +379,10 @@ class _KidDashboardState extends State<KidDashboard>
       _studyWeeklyAchieved = 0;
     });
 
+    // FIX: Only update weekly progress for this kid
     await _dataService.saveProgress(widget.user.id, {
-      '${widget.user.id}_choreDailyAchieved': _choreDailyAchieved,
       '${widget.user.id}_choreWeeklyAchieved': 0,
-      '${widget.user.id}_prayerDailyAchieved': _prayerDailyAchieved,
       '${widget.user.id}_prayerWeeklyAchieved': 0,
-      '${widget.user.id}_studyDailyAchieved': _studyDailyAchieved,
       '${widget.user.id}_studyWeeklyAchieved': 0,
     });
   }
