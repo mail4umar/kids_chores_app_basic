@@ -272,6 +272,18 @@ class DataService {
     }
   }
 
+  // Future<void> removeTask(String taskId) async {
+  //   final tasks = await fetchTasks();
+  //   tasks.removeWhere((task) => task.id == taskId);
+  //   await saveTasks(tasks);
+  // }
+
+  Future<void> saveTasks(List<Task> tasks) async {
+    final prefs = await SharedPreferences.getInstance();
+    final tasksJson = jsonEncode(tasks.map((task) => task.toJson()).toList());
+    await prefs.setString('tasks', tasksJson);
+  }
+
   Future<bool> _saveWithRetry(String key, String value, String dataType) async {
     for (int attempt = 1; attempt <= _maxRetries; attempt++) {
       try {
