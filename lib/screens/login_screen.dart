@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
 import '../models/user.dart';
 import '../models/user_type.dart';
 import '../models/task.dart';
@@ -33,6 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _parentPin = settings['pin'] ?? '1234';
       if (users.isEmpty) {
+        // Only create a parent profile, no kid profiles
         _users = [
           User(
             id: 'parent',
@@ -40,14 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
             avatar: AppConstants.avatars[2],
             userType: UserType.parent,
           ),
-          User(
-            id: const Uuid().v4(),
-            name: 'Kid #1',
-            avatar: AppConstants.avatars[0],
-            userType: UserType.kid,
-          ),
         ];
-        _initializePrayers(_users[1]); // Initialize prayers for Kid #1
         _dataService.saveUsers(_users);
       } else {
         _users = users;
@@ -114,59 +107,57 @@ class _LoginScreenState extends State<LoginScreen> {
     String selectedAvatar = user.avatar;
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text(
-              'Choose Avatar',
-              style: AppConstants.subheadingTextStyle,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Choose Avatar',
+          style: AppConstants.subheadingTextStyle,
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 200,
+          child: GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
             ),
-            content: SizedBox(
-              width: double.maxFinite,
-              height: 200,
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                ),
-                itemCount: AppConstants.avatars.length,
-                itemBuilder: (context, index) {
-                  final avatar = AppConstants.avatars[index];
-                  return GestureDetector(
-                    onTap: () {
-                      selectedAvatar = avatar;
-                      final updatedUser = User(
-                        id: user.id,
-                        name: user.name,
-                        avatar: selectedAvatar,
-                        userType: user.userType,
-                      );
-                      setState(() {
-                        final index = _users.indexWhere((u) => u.id == user.id);
-                        _users[index] = updatedUser;
-                      });
-                      _dataService.saveUsers(_users);
-                      Navigator.pop(context);
-                    },
-                    child: CircleAvatar(
-                      radius: 30,
-                      backgroundImage: AssetImage(avatar),
-                      backgroundColor:
-                          selectedAvatar == avatar
-                              ? AppConstants.primaryPink.withOpacity(0.3)
-                              : AppConstants.secondaryPink.withOpacity(0.2),
-                    ),
+            itemCount: AppConstants.avatars.length,
+            itemBuilder: (context, index) {
+              final avatar = AppConstants.avatars[index];
+              return GestureDetector(
+                onTap: () {
+                  selectedAvatar = avatar;
+                  final updatedUser = User(
+                    id: user.id,
+                    name: user.name,
+                    avatar: selectedAvatar,
+                    userType: user.userType,
                   );
+                  setState(() {
+                    final index = _users.indexWhere((u) => u.id == user.id);
+                    _users[index] = updatedUser;
+                  });
+                  _dataService.saveUsers(_users);
+                  Navigator.pop(context);
                 },
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-            ],
+                child: CircleAvatar(
+                  radius: 30,
+                  backgroundImage: AssetImage(avatar),
+                  backgroundColor: selectedAvatar == avatar
+                      ? AppConstants.primaryPink.withOpacity(0.3)
+                      : AppConstants.secondaryPink.withOpacity(0.2),
+                ),
+              );
+            },
           ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -178,58 +169,57 @@ class _LoginScreenState extends State<LoginScreen> {
 
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text(
-              'Edit Profile',
-              style: AppConstants.subheadingTextStyle,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Edit Profile',
+          style: AppConstants.subheadingTextStyle,
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Name'),
             ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Name'),
-                ),
-                const SizedBox(height: 10),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _editAvatar(user); // Open avatar selection
-                  },
-                  child: const Text('Change Avatar'),
-                ),
-              ],
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _editAvatar(user); // Open avatar selection
+              },
+              child: const Text('Change Avatar'),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  final updatedUser = User(
-                    id: user.id,
-                    name: nameController.text,
-                    avatar: selectedAvatar,
-                    userType: user.userType,
-                  );
-                  setState(() {
-                    final index = _users.indexWhere((u) => u.id == user.id);
-                    _users[index] = updatedUser;
-                  });
-                  await _dataService.saveUsers(_users);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Profile updated!')),
-                    );
-                  }
-                  Navigator.pop(context);
-                },
-                child: const Text('Save'),
-              ),
-            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
           ),
+          TextButton(
+            onPressed: () async {
+              final updatedUser = User(
+                id: user.id,
+                name: nameController.text,
+                avatar: selectedAvatar,
+                userType: user.userType,
+              );
+              setState(() {
+                final index = _users.indexWhere((u) => u.id == user.id);
+                _users[index] = updatedUser;
+              });
+              await _dataService.saveUsers(_users);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Profile updated!')),
+                );
+              }
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -322,15 +312,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       GestureDetector(
                         onTap: () => _login(user),
-                        onLongPress:
-                            user.userType == UserType.kid
-                                ? () => _editProfile(user)
-                                : null,
+                        onLongPress: user.userType == UserType.kid
+                            ? () => _editProfile(user)
+                            : null,
                         child: CircleAvatar(
                           radius: 50,
                           backgroundImage: AssetImage(user.avatar),
-                          backgroundColor: AppConstants.secondaryPink
-                              .withOpacity(0.2),
+                          backgroundColor:
+                              AppConstants.secondaryPink.withOpacity(0.2),
                         ),
                       ),
                       const SizedBox(height: 10),
