@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../models/user.dart';
 import '../models/user_type.dart';
 import '../models/task.dart';
@@ -33,6 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _parentPin = settings['pin'] ?? '1234';
       if (users.isEmpty) {
+        // Only create a parent profile, no kid profiles
         _users = [
           User(
             id: 'parent',
@@ -40,14 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
             avatar: AppConstants.avatars[2],
             userType: UserType.parent,
           ),
-          User(
-            id: const Uuid().v4(),
-            name: 'Kid #1',
-            avatar: AppConstants.avatars[0],
-            userType: UserType.kid,
-          ),
         ];
-        _initializePrayers(_users[1]); // Initialize prayers for Kid #1
         _dataService.saveUsers(_users);
       } else {
         _users = users;
@@ -114,59 +108,57 @@ class _LoginScreenState extends State<LoginScreen> {
     String selectedAvatar = user.avatar;
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text(
-              'Choose Avatar',
-              style: AppConstants.subheadingTextStyle,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Choose Avatar',
+          style: AppConstants.subheadingTextStyle,
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 200,
+          child: GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
             ),
-            content: SizedBox(
-              width: double.maxFinite,
-              height: 200,
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                ),
-                itemCount: AppConstants.avatars.length,
-                itemBuilder: (context, index) {
-                  final avatar = AppConstants.avatars[index];
-                  return GestureDetector(
-                    onTap: () {
-                      selectedAvatar = avatar;
-                      final updatedUser = User(
-                        id: user.id,
-                        name: user.name,
-                        avatar: selectedAvatar,
-                        userType: user.userType,
-                      );
-                      setState(() {
-                        final index = _users.indexWhere((u) => u.id == user.id);
-                        _users[index] = updatedUser;
-                      });
-                      _dataService.saveUsers(_users);
-                      Navigator.pop(context);
-                    },
-                    child: CircleAvatar(
-                      radius: 30,
-                      backgroundImage: AssetImage(avatar),
-                      backgroundColor:
-                          selectedAvatar == avatar
-                              ? AppConstants.primaryPink.withOpacity(0.3)
-                              : AppConstants.secondaryPink.withOpacity(0.2),
-                    ),
+            itemCount: AppConstants.avatars.length,
+            itemBuilder: (context, index) {
+              final avatar = AppConstants.avatars[index];
+              return GestureDetector(
+                onTap: () {
+                  selectedAvatar = avatar;
+                  final updatedUser = User(
+                    id: user.id,
+                    name: user.name,
+                    avatar: selectedAvatar,
+                    userType: user.userType,
                   );
+                  setState(() {
+                    final index = _users.indexWhere((u) => u.id == user.id);
+                    _users[index] = updatedUser;
+                  });
+                  _dataService.saveUsers(_users);
+                  Navigator.pop(context);
                 },
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-            ],
+                child: CircleAvatar(
+                  radius: 30,
+                  backgroundImage: AssetImage(avatar),
+                  backgroundColor: selectedAvatar == avatar
+                      ? AppConstants.primaryPink.withOpacity(0.3)
+                      : AppConstants.secondaryPink.withOpacity(0.2),
+                ),
+              );
+            },
           ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -178,58 +170,57 @@ class _LoginScreenState extends State<LoginScreen> {
 
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text(
-              'Edit Profile',
-              style: AppConstants.subheadingTextStyle,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Edit Profile',
+          style: AppConstants.subheadingTextStyle,
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Name'),
             ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Name'),
-                ),
-                const SizedBox(height: 10),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _editAvatar(user); // Open avatar selection
-                  },
-                  child: const Text('Change Avatar'),
-                ),
-              ],
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _editAvatar(user); // Open avatar selection
+              },
+              child: const Text('Change Avatar'),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  final updatedUser = User(
-                    id: user.id,
-                    name: nameController.text,
-                    avatar: selectedAvatar,
-                    userType: user.userType,
-                  );
-                  setState(() {
-                    final index = _users.indexWhere((u) => u.id == user.id);
-                    _users[index] = updatedUser;
-                  });
-                  await _dataService.saveUsers(_users);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Profile updated!')),
-                    );
-                  }
-                  Navigator.pop(context);
-                },
-                child: const Text('Save'),
-              ),
-            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
           ),
+          TextButton(
+            onPressed: () async {
+              final updatedUser = User(
+                id: user.id,
+                name: nameController.text,
+                avatar: selectedAvatar,
+                userType: user.userType,
+              );
+              setState(() {
+                final index = _users.indexWhere((u) => u.id == user.id);
+                _users[index] = updatedUser;
+              });
+              await _dataService.saveUsers(_users);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Profile updated!')),
+                );
+              }
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -279,82 +270,182 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Choose Your Profile')),
-      body: Padding(
-        padding: const EdgeInsets.all(AppConstants.defaultPadding),
-        child: Column(
-          children: [
-            Expanded(
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 20,
-                  mainAxisSpacing: 20,
-                  childAspectRatio: 0.8,
-                ),
-                itemCount: _users.length + 1,
-                itemBuilder: (context, index) {
-                  if (index == _users.length) {
-                    return GestureDetector(
-                      onTap: _addKidProfile,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppConstants.lightPink,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.add_circle,
-                              size: 50,
-                              color: AppConstants.primaryPink,
-                            ),
-                            SizedBox(height: 10),
-                            Text('Add Kid', style: AppConstants.bodyTextStyle),
-                          ],
-                        ),
-                      ),
-                    );
-                  }
-                  final user = _users[index];
-                  return Column(
+      // Remove AppBar to create a full-screen home feel
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppConstants.lightPink.withOpacity(0.8),
+              AppConstants.secondaryPink.withOpacity(0.5),
+            ],
+          ),
+          // Optional: Add a subtle background pattern
+          image: const DecorationImage(
+            image: AssetImage('assets/images/background_pattern.png'),
+            fit: BoxFit.cover,
+            opacity: 0.1,
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(AppConstants.defaultPadding),
+            child: Column(
+              children: [
+                // Creative Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Column(
                     children: [
-                      GestureDetector(
-                        onTap: () => _login(user),
-                        onLongPress:
-                            user.userType == UserType.kid
-                                ? () => _editProfile(user)
-                                : null,
-                        child: CircleAvatar(
-                          radius: 50,
-                          backgroundImage: AssetImage(user.avatar),
-                          backgroundColor: AppConstants.secondaryPink
-                              .withOpacity(0.2),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
                       Text(
-                        user.name,
-                        style: AppConstants.bodyTextStyle.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppConstants.primaryPink,
-                        ),
-                      ),
-                      if (user.userType == UserType.kid)
-                        TextButton(
-                          onPressed: () => _editAvatar(user),
-                          child: const Text(
-                            'Change Avatar',
-                            style: TextStyle(color: AppConstants.primaryPink),
+                        'Ghumman Kids!',
+                        style: GoogleFonts.comicNeue(
+                          textStyle: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: AppConstants.primaryPink,
                           ),
                         ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Choose your profile to start',
+                        style: GoogleFonts.comicNeue(
+                          textStyle: TextStyle(
+                            fontSize: 18,
+                            color: AppConstants.primaryPink.withOpacity(0.7),
+                          ),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ],
-                  );
-                },
-              ),
+                  ),
+                ),
+                Expanded(
+                  child: GridView.builder(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 20,
+                      mainAxisSpacing: 20,
+                      childAspectRatio: 0.75, // Adjusted for better spacing
+                    ),
+                    itemCount: _users.length + 1,
+                    itemBuilder: (context, index) {
+                      if (index == _users.length) {
+                        return GestureDetector(
+                          onTap: _addKidProfile,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color:
+                                      AppConstants.primaryPink.withOpacity(0.2),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.add_circle,
+                                  size: 50,
+                                  color: AppConstants.primaryPink,
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  'Add Kid',
+                                  style: GoogleFonts.comicNeue(
+                                    textStyle: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppConstants.primaryPink,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                      final user = _users[index];
+                      return Column(
+                        children: [
+                          GestureDetector(
+                            onTap: () => _login(user),
+                            onLongPress: user.userType == UserType.kid
+                                ? () => _editProfile(user)
+                                : null,
+                            child: AnimatedScale(
+                              scale: 1.0,
+                              duration: const Duration(milliseconds: 200),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppConstants.primaryPink
+                                          .withOpacity(0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: CircleAvatar(
+                                  radius: 50,
+                                  backgroundImage: AssetImage(user.avatar),
+                                  backgroundColor: Colors.white,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: AppConstants.primaryPink,
+                                        width: 2,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            user.name,
+                            style: GoogleFonts.comicNeue(
+                              textStyle: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppConstants.primaryPink,
+                              ),
+                            ),
+                          ),
+                          if (user.userType == UserType.kid)
+                            TextButton(
+                              onPressed: () => _editAvatar(user),
+                              child: Text(
+                                'Change Avatar',
+                                style: GoogleFonts.comicNeue(
+                                  textStyle: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppConstants.primaryPink,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

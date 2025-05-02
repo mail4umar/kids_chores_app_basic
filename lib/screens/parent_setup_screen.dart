@@ -608,34 +608,30 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
   }
 
   Widget _buildAvatarGrid() {
-    return Container(
-      height: 120,
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: const EdgeInsets.all(8),
+    return SizedBox(
+      width: double.infinity,
+      height: 200,
       child: GridView.builder(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4,
+          crossAxisCount: 3,
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
         ),
-        scrollDirection: Axis.horizontal,
         itemCount: AppConstants.avatars.length,
         itemBuilder: (context, index) {
           final avatar = AppConstants.avatars[index];
           return GestureDetector(
-            onTap: () => setState(() => _selectedAvatar = avatar),
+            onTap: () {
+              setState(() {
+                _selectedAvatar = avatar;
+              });
+            },
             child: CircleAvatar(
               radius: 30,
               backgroundImage: AssetImage(avatar),
               backgroundColor: _selectedAvatar == avatar
                   ? AppConstants.primaryPink.withOpacity(0.3)
-                  : Colors.transparent,
-              child: _selectedAvatar == avatar
-                  ? const Icon(Icons.check_circle, color: Colors.white)
-                  : null,
+                  : AppConstants.secondaryPink.withOpacity(0.2),
             ),
           );
         },
