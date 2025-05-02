@@ -73,6 +73,21 @@ class DataService {
     return success;
   }
 
+  Future<bool> removeTask(String id) async {
+    final tasks = await fetchTasks();
+    final taskIndex = tasks.indexWhere((task) => task.id == id);
+    if (taskIndex == -1) {
+      debugPrint('DataService: Task with ID $id not found.');
+      return false;
+    }
+    tasks.removeAt(taskIndex);
+    final success = await _saveWithRetry(
+        _tasksKey, jsonEncode(tasks.map((t) => t.toJson()).toList()), 'tasks');
+    debugPrint(
+        'DataService: ${success ? 'Removed' : 'Failed to remove'} task: $id');
+    return success;
+  }
+
   Future<bool> updateTask(Task task) async {
     return addTask(task);
   }
