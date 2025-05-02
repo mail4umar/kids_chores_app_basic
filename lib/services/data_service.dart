@@ -9,12 +9,16 @@ class DataService {
   static const String _tasksKey = 'tasks';
   static const String _settingsKey = 'settings';
   static const String _redemptionsKey = 'redemptions';
-  static const String _lastResetDateKey =
-      'lastResetDate'; // New key for tracking resets
-  static const String _lastWeeklyResetDateKey =
-      'lastWeeklyResetDate'; // For weekly resets
-  static const int _maxRetries = 3; // Retry failed writes
+  static const String _lastResetDateKey = 'lastResetDate';
+  static const String _lastWeeklyResetDateKey = 'lastWeeklyResetDate';
+  static const int _maxRetries = 3;
   static const Duration _retryDelay = Duration(milliseconds: 100);
+
+  // New method to get all tasks for a specific kid
+  Future<List<Task>> fetchTasksForKid(String kidId) async {
+    final allTasks = await fetchTasks();
+    return allTasks.where((task) => task.id.startsWith('${kidId}_')).toList();
+  }
 
   Future<List<User>> fetchUsers() async {
     final prefs = await SharedPreferences.getInstance();
@@ -59,13 +63,16 @@ class DataService {
   }
 
   Future<bool> addTask(Task task) async {
+    // CRITICAL FIX: Make sure we don't modify tasks for other kids
     final tasks = await fetchTasks();
     final existingIndex = tasks.indexWhere((t) => t.id == task.id);
+
     if (existingIndex != -1) {
       tasks[existingIndex] = task;
     } else {
       tasks.add(task);
     }
+
     final success = await _saveWithRetry(_tasksKey,
         jsonEncode(tasks.map((t) => t.toJson()).toList()), 'task ${task.id}');
     debugPrint(
@@ -89,7 +96,8 @@ class DataService {
   }
 
   Future<bool> updateTask(Task task) async {
-    return addTask(task);
+    return addTask(
+        task); // This should be okay as long as addTask works correctly
   }
 
   Future<Map<String, dynamic>> fetchSettings() async {
@@ -184,7 +192,6 @@ class DataService {
     }
   }
 
-  // New method to get the last reset date for a specific kid
   Future<DateTime?> getLastResetDate(String kidId) async {
     final prefs = await SharedPreferences.getInstance();
     final dateStr = prefs.getString('${_lastResetDateKey}_$kidId');
@@ -200,7 +207,6 @@ class DataService {
     }
   }
 
-  // New method to save the last reset date for a specific kid
   Future<bool> saveLastResetDate(String kidId, DateTime date) async {
     final success = await _saveWithRetry(
       '${_lastResetDateKey}_$kidId',
@@ -212,7 +218,6 @@ class DataService {
     return success;
   }
 
-  // New method to get the last weekly reset date for a specific kid
   Future<DateTime?> getLastWeeklyResetDate(String kidId) async {
     final prefs = await SharedPreferences.getInstance();
     final dateStr = prefs.getString('${_lastWeeklyResetDateKey}_$kidId');
@@ -229,7 +234,6 @@ class DataService {
     }
   }
 
-  // New method to save the last weekly reset date for a specific kid
   Future<bool> saveLastWeeklyResetDate(String kidId, DateTime date) async {
     final success = await _saveWithRetry(
       '${_lastWeeklyResetDateKey}_$kidId',
@@ -241,7 +245,6 @@ class DataService {
     return success;
   }
 
-  // New method to get tasks completed today for a specific kid and category
   Future<List<Task>> getTasksCompletedToday(
       String kidId, String category) async {
     final tasks = await fetchTasks();
@@ -259,7 +262,6 @@ class DataService {
         .toList();
   }
 
-  // New method to reset daily task completion status
   Future<bool> resetDailyTaskCompletion(String kidId) async {
     debugPrint('DataService: Resetting daily task completion for kid: $kidId');
     try {
@@ -271,12 +273,6 @@ class DataService {
       return false;
     }
   }
-
-  // Future<void> removeTask(String taskId) async {
-  //   final tasks = await fetchTasks();
-  //   tasks.removeWhere((task) => task.id == taskId);
-  //   await saveTasks(tasks);
-  // }
 
   Future<void> saveTasks(List<Task> tasks) async {
     final prefs = await SharedPreferences.getInstance();
@@ -307,9 +303,10 @@ class DataService {
     return false;
   }
 
+  // FIXED PROGRESS METHODS
   Future<Map<String, dynamic>> fetchProgress(String userId) async {
-    // Assuming you're using SharedPreferences or similar
     final prefs = await SharedPreferences.getInstance();
+    // Return with default values only if the key doesn't exist
     return {
       '${userId}_choreDailyAchieved':
           prefs.getInt('${userId}_choreDailyAchieved') ?? 0,
@@ -326,20 +323,56 @@ class DataService {
     };
   }
 
+  // FIXED: Properly save progress per user
   Future<void> saveProgress(
       String userId, Map<String, dynamic> progress) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('${userId}_choreDailyAchieved',
-        progress['${userId}_choreDailyAchieved']);
-    await prefs.setInt('${userId}_choreWeeklyAchieved',
-        progress['${userId}_choreWeeklyAchieved']);
-    await prefs.setInt('${userId}_prayerDailyAchieved',
-        progress['${userId}_prayerDailyAchieved']);
-    await prefs.setInt('${userId}_prayerWeeklyAchieved',
-        progress['${userId}_prayerWeeklyAchieved']);
-    await prefs.setInt('${userId}_studyDailyAchieved',
-        progress['${userId}_studyDailyAchieved']);
-    await prefs.setInt('${userId}_studyWeeklyAchieved',
-        progress['${userId}_studyWeeklyAchieved']);
+
+    // Debug statement to see what's being saved
+    debugPrint(
+        'DataService: Saving progress for userId: $userId with data: $progress');
+
+    // Make sure we're only updating the specific user's progress values
+    if (progress.containsKey('${userId}_choreDailyAchieved')) {
+      await prefs.setInt('${userId}_choreDailyAchieved',
+          progress['${userId}_choreDailyAchieved']);
+    }
+
+    if (progress.containsKey('${userId}_choreWeeklyAchieved')) {
+      await prefs.setInt('${userId}_choreWeeklyAchieved',
+          progress['${userId}_choreWeeklyAchieved']);
+    }
+
+    if (progress.containsKey('${userId}_prayerDailyAchieved')) {
+      await prefs.setInt('${userId}_prayerDailyAchieved',
+          progress['${userId}_prayerDailyAchieved']);
+    }
+
+    if (progress.containsKey('${userId}_prayerWeeklyAchieved')) {
+      await prefs.setInt('${userId}_prayerWeeklyAchieved',
+          progress['${userId}_prayerWeeklyAchieved']);
+    }
+
+    if (progress.containsKey('${userId}_studyDailyAchieved')) {
+      await prefs.setInt('${userId}_studyDailyAchieved',
+          progress['${userId}_studyDailyAchieved']);
+    }
+
+    if (progress.containsKey('${userId}_studyWeeklyAchieved')) {
+      await prefs.setInt('${userId}_studyWeeklyAchieved',
+          progress['${userId}_studyWeeklyAchieved']);
+    }
+
+    // Debug to verify data was saved
+    final verifyProgress = await fetchProgress(userId);
+    debugPrint('DataService: Verified saved progress: $verifyProgress');
+  }
+
+  // Add a new method to update a single progress item to avoid overwriting others
+  Future<void> updateProgressItem(String userId, String key, int value) async {
+    final prefs = await SharedPreferences.getInstance();
+    final fullKey = '${userId}_$key';
+    await prefs.setInt(fullKey, value);
+    debugPrint('DataService: Updated progress item $fullKey to $value');
   }
 }

@@ -59,7 +59,6 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
     super.dispose();
   }
 
-  /// Loads initial data for kids, settings, tasks, and redemption requests.
   Future<void> _loadData() async {
     final users = await _dataService.fetchUsers();
     final settings = await _dataService.fetchSettings();
@@ -78,7 +77,6 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
     });
   }
 
-  /// Loads kid-specific data such as tasks and settings.
   void _loadKidData(
       String kidId, Map<String, dynamic> settings, List<Task> tasks) {
     setState(() {
@@ -104,7 +102,6 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
     });
   }
 
-  /// Adds a new chore for the selected kid.
   void _addChore() {
     if (_choreController.text.isEmpty || _selectedKid == null) return;
 
@@ -125,16 +122,13 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
     _dataService.addTask(task);
   }
 
-  /// Removes a chore from the selected kid's tasks.
   void _removeChore(Task task) {
     setState(() {
       _choreTasks.removeWhere((t) => t.id == task.id);
     });
-    _dataService
-        .removeTask(task.id); // Ensure removeTask is implemented in DataService
+    _dataService.removeTask(task.id);
   }
 
-  /// Adds a new study task for the selected kid.
   void _addStudy() {
     if (_studyController.text.isEmpty || _selectedKid == null) return;
 
@@ -153,16 +147,13 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
     _dataService.addTask(task);
   }
 
-  /// Removes a study task from the selected kid's tasks.
   void _removeStudy(Task task) {
     setState(() {
       _studyTasks.removeWhere((t) => t.id == task.id);
     });
-    _dataService
-        .removeTask(task.id); // Ensure removeTask is implemented in DataService
+    _dataService.removeTask(task.id);
   }
 
-  /// Shows a confirmation dialog to delete a kid's profile.
   void _deleteKid() {
     if (_kidToDelete == null) return;
 
@@ -205,7 +196,6 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
     );
   }
 
-  /// Resets kid-specific data when no kids are selected.
   void _resetKidData() {
     _choreTasks = [];
     _studyTasks = [];
@@ -220,7 +210,6 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
     _studyPoints = 2;
   }
 
-  /// Handles redemption requests (approve or reject).
   void _handleRedemptionRequest(
       Map<String, dynamic> request, bool accept) async {
     final kidId = request['kidId'];
@@ -249,7 +238,6 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
     );
   }
 
-  /// Reduces points for the selected kid.
   void _reduceKidPoints() async {
     if (_selectedKid == null || _reducePoints <= 0) {
       if (!mounted) return;
@@ -281,7 +269,6 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
     );
   }
 
-  /// Saves the setup (either a new kid or current settings).
   Future<void> _saveSetup() async {
     if (widget.addKidMode) {
       if (_kidNameController.text.isEmpty) {
@@ -346,68 +333,200 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.addKidMode ? 'Add New Kid' : 'Parent Setup'),
+        title: Text(
+          widget.addKidMode ? 'Add New Kid' : 'Parent Setup',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: AppConstants.primaryPink.withOpacity(0.8),
+        elevation: 0,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(AppConstants.defaultPadding),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (widget.addKidMode) ...[
-                _buildSectionTitle('Kid Name'),
-                TextField(
-                  controller: _kidNameController,
-                  decoration:
-                      const InputDecoration(hintText: 'Enter kid\'s name'),
-                ),
-                const SizedBox(height: 20),
-                _buildSectionTitle('Kid Avatar'),
-                _buildAvatarGrid(),
-                const SizedBox(height: 30),
-                _buildSaveButton('Add Kid'),
-              ] else ...[
-                _buildSectionTitle('Set PIN'),
-                _buildPinField(),
-                const SizedBox(height: 20),
-                _buildSectionTitle('Select Kid'),
-                _buildKidDropdown(),
-                const SizedBox(height: 20),
-                _buildSectionTitle('Delete Kid Profile'),
-                _buildDeleteKidDropdown(),
-                const SizedBox(height: 10),
-                Center(
-                  child: ElevatedButton(
-                    onPressed: _kidToDelete != null ? _deleteKid : null,
-                    style:
-                        ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                    child: const Text('Delete Selected Kid'),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppConstants.primaryPink.withOpacity(0.05),
+              Colors.white,
+            ],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppConstants.defaultPadding),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (widget.addKidMode) ...[
+                  _buildSectionCard(
+                    title: 'Kid Profile',
+                    content: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSectionTitle('Kid Name'),
+                        _buildTextField(
+                          controller: _kidNameController,
+                          hint: 'Enter kid\'s name',
+                          icon: Icons.person,
+                        ),
+                        const SizedBox(height: 20),
+                        _buildSectionTitle('Kid Avatar'),
+                        _buildAvatarGrid(),
+                      ],
+                    ),
                   ),
-                ),
-                if (_selectedKid != null) ...[
-                  const SizedBox(height: 20),
-                  _buildSettingsSection(),
-                  _buildChoreSection(),
-                  _buildStudySection(),
-                  _buildReducePointsSection(),
-                  _buildRedemptionRequestsSection(),
                   const SizedBox(height: 30),
-                  _buildSaveButton('Save Setup'),
+                  _buildSaveButton('Add Kid'),
+                ] else ...[
+                  _buildSectionCard(
+                    title: 'Security',
+                    content: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSectionTitle('Set PIN'),
+                        _buildPinField(),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildSectionCard(
+                    title: 'Kid Management',
+                    content: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSectionTitle('Select Kid'),
+                        _buildKidDropdown(),
+                        const SizedBox(height: 20),
+                        _buildSectionTitle('Delete Kid Profile'),
+                        _buildDeleteKidDropdown(),
+                        const SizedBox(height: 10),
+                        Center(
+                          child: ElevatedButton.icon(
+                            onPressed: _kidToDelete != null ? _deleteKid : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                            ),
+                            icon: const Icon(Icons.delete_forever),
+                            label: const Text('Delete Selected Kid'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_selectedKid != null) ...[
+                    const SizedBox(height: 16),
+                    _buildSectionCard(
+                      title: 'Kid Settings',
+                      content: _buildSettingsSection(),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildSectionCard(
+                      title: 'Task Management',
+                      content: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildChoreSection(),
+                          const Divider(height: 30),
+                          _buildStudySection(),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildSectionCard(
+                      title: 'Point Management',
+                      content: _buildReducePointsSection(),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildSectionCard(
+                      title: 'Requests',
+                      content: _buildRedemptionRequestsSection(),
+                    ),
+                    const SizedBox(height: 30),
+                    _buildSaveButton('Save Setup'),
+                  ],
                 ],
               ],
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  /// Builds a section title with consistent styling.
-  Widget _buildSectionTitle(String title) {
-    return Text(title, style: AppConstants.subheadingTextStyle);
+  Widget _buildSectionCard({required String title, required Widget content}) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppConstants.primaryPink,
+              ),
+            ),
+            const Divider(height: 24),
+            content,
+          ],
+        ),
+      ),
+    );
   }
 
-  /// Builds the PIN input field.
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Text(
+        title,
+        style: AppConstants.subheadingTextStyle.copyWith(
+          fontSize: 16,
+          color: Colors.black87,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    IconData? icon,
+    bool obscureText = false,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      decoration: InputDecoration(
+        hintText: hint,
+        filled: true,
+        fillColor: Colors.grey[50],
+        prefixIcon:
+            icon != null ? Icon(icon, color: AppConstants.primaryPink) : null,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: AppConstants.primaryPink),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPinField() {
     return TextField(
       keyboardType: TextInputType.number,
@@ -415,53 +534,94 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
       maxLength: 4,
       onChanged: (value) => _pin = value,
       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      decoration: const InputDecoration(hintText: 'Enter 4-digit PIN'),
+      decoration: InputDecoration(
+        hintText: 'Enter 4-digit PIN',
+        filled: true,
+        fillColor: Colors.grey[50],
+        prefixIcon: Icon(Icons.lock, color: AppConstants.primaryPink),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: AppConstants.primaryPink),
+        ),
+      ),
     );
   }
 
-  /// Builds the kid selection dropdown.
   Widget _buildKidDropdown() {
-    return DropdownButton<User>(
-      value: _selectedKid,
-      hint: const Text('Choose a kid'),
-      isExpanded: true,
-      onChanged: (User? kid) {
-        if (kid != null) {
-          setState(() {
-            _selectedKid = kid;
-            _loadKidData(kid.id, {}, []);
-          });
-        }
-      },
-      items: _kids.map((kid) {
-        return DropdownMenuItem(value: kid, child: Text(kid.name));
-      }).toList(),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: DropdownButton<User>(
+        value: _selectedKid,
+        hint: const Text('Choose a kid'),
+        isExpanded: true,
+        underline: const SizedBox(),
+        icon:
+            const Icon(Icons.arrow_drop_down, color: AppConstants.primaryPink),
+        onChanged: (User? kid) {
+          if (kid != null) {
+            setState(() {
+              _selectedKid = kid;
+              _loadKidData(kid.id, {}, []);
+            });
+          }
+        },
+        items: _kids.map((kid) {
+          return DropdownMenuItem(value: kid, child: Text(kid.name));
+        }).toList(),
+      ),
     );
   }
 
-  /// Builds the delete kid dropdown.
   Widget _buildDeleteKidDropdown() {
-    return DropdownButton<User>(
-      value: _kidToDelete,
-      hint: const Text('Select kid to delete'),
-      isExpanded: true,
-      onChanged: (User? kid) => setState(() => _kidToDelete = kid),
-      items: _kids.map((kid) {
-        return DropdownMenuItem(value: kid, child: Text(kid.name));
-      }).toList(),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: DropdownButton<User>(
+        value: _kidToDelete,
+        hint: const Text('Select kid to delete'),
+        isExpanded: true,
+        underline: const SizedBox(),
+        icon: const Icon(Icons.arrow_drop_down, color: Colors.red),
+        onChanged: (User? kid) => setState(() => _kidToDelete = kid),
+        items: _kids.map((kid) {
+          return DropdownMenuItem(value: kid, child: Text(kid.name));
+        }).toList(),
+      ),
     );
   }
 
-  /// Builds the avatar selection grid for adding a new kid.
   Widget _buildAvatarGrid() {
-    return SizedBox(
-      height: 100,
+    return Container(
+      height: 120,
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.all(8),
       child: GridView.builder(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
+          crossAxisCount: 4,
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
         ),
+        scrollDirection: Axis.horizontal,
         itemCount: AppConstants.avatars.length,
         itemBuilder: (context, index) {
           final avatar = AppConstants.avatars[index];
@@ -471,8 +631,11 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
               radius: 30,
               backgroundImage: AssetImage(avatar),
               backgroundColor: _selectedAvatar == avatar
-                  ? AppConstants.primaryPink.withValues(alpha: 0.3)
-                  : AppConstants.secondaryPink.withValues(alpha: 0.2),
+                  ? AppConstants.primaryPink.withOpacity(0.3)
+                  : Colors.transparent,
+              child: _selectedAvatar == avatar
+                  ? const Icon(Icons.check_circle, color: Colors.white)
+                  : null,
             ),
           );
         },
@@ -480,136 +643,223 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
     );
   }
 
-  /// Builds the settings section for chores, prayers, and study.
   Widget _buildSettingsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionTitle('Chore Settings'),
-        _buildNumberField(
-            'Chore daily target', (value) => _choreDailyTarget = value),
-        _buildNumberField(
-            'Chore weekly target', (value) => _choreWeeklyTarget = value),
-        _buildNumberField(
-            'Points per chore (e.g., 2)', (value) => _chorePoints = value,
-            defaultValue: 2),
+        _buildNumberField('Chore daily target',
+            (value) => _choreDailyTarget = value, Icons.calendar_today),
+        _buildNumberField('Chore weekly target',
+            (value) => _choreWeeklyTarget = value, Icons.view_week),
+        _buildNumberField('Points per chore (e.g., 2)',
+            (value) => _chorePoints = value, Icons.stars, 2),
         const SizedBox(height: 20),
         _buildSectionTitle('Prayer Settings'),
-        _buildNumberField(
-            'Prayer daily target', (value) => _prayerDailyTarget = value),
-        _buildNumberField(
-            'Prayer weekly target', (value) => _prayerWeeklyTarget = value),
-        _buildNumberField(
-            'Points per prayer (e.g., 1)', (value) => _prayerPoints = value,
-            defaultValue: 1),
+        _buildNumberField('Prayer daily target',
+            (value) => _prayerDailyTarget = value, Icons.calendar_today),
+        _buildNumberField('Prayer weekly target',
+            (value) => _prayerWeeklyTarget = value, Icons.view_week),
+        _buildNumberField('Points per prayer (e.g., 1)',
+            (value) => _prayerPoints = value, Icons.stars, 1),
         const SizedBox(height: 20),
         _buildSectionTitle('Study Settings'),
-        _buildNumberField(
-            'Study daily target', (value) => _studyDailyTarget = value),
-        _buildNumberField(
-            'Study weekly target', (value) => _studyWeeklyTarget = value),
-        _buildNumberField(
-            'Points per study task (e.g., 2)', (value) => _studyPoints = value,
-            defaultValue: 2),
+        _buildNumberField('Study daily target',
+            (value) => _studyDailyTarget = value, Icons.calendar_today),
+        _buildNumberField('Study weekly target',
+            (value) => _studyWeeklyTarget = value, Icons.view_week),
+        _buildNumberField('Points per study task (e.g., 2)',
+            (value) => _studyPoints = value, Icons.stars, 2),
       ],
     );
   }
 
-  /// Builds a number input field with a callback to update state.
-  Widget _buildNumberField(String hint, void Function(int) onChanged,
-      {int defaultValue = 0}) {
+  Widget _buildNumberField(
+      String hint, void Function(int) onChanged, IconData icon,
+      [int defaultValue = 0]) {
     return Padding(
-      padding: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.only(bottom: 12),
       child: TextField(
         keyboardType: TextInputType.number,
         onChanged: (value) => onChanged(int.tryParse(value) ?? defaultValue),
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        decoration: InputDecoration(hintText: hint),
+        decoration: InputDecoration(
+          hintText: hint,
+          filled: true,
+          fillColor: Colors.grey[50],
+          prefixIcon: Icon(icon, color: AppConstants.primaryPink),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.grey[300]!),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: AppConstants.primaryPink),
+          ),
+        ),
       ),
     );
   }
 
-  /// Builds the chore input section.
   Widget _buildChoreSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 20),
         _buildSectionTitle('Chores'),
         Row(
           children: [
             Expanded(
               child: TextField(
                 controller: _choreController,
-                decoration: const InputDecoration(hintText: 'Enter chore'),
+                decoration: InputDecoration(
+                  hintText: 'Enter chore',
+                  filled: true,
+                  fillColor: Colors.grey[50],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppConstants.primaryPink),
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 10),
-            DropdownButton<String>(
-              value: _selectedChoreIcon,
-              onChanged: (value) => setState(() => _selectedChoreIcon = value!),
-              items: AppConstants.choreIconNames
-                  .map((icon) =>
-                      DropdownMenuItem(value: icon, child: Text(icon)))
-                  .toList(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: DropdownButton<String>(
+                value: _selectedChoreIcon,
+                underline: const SizedBox(),
+                onChanged: (value) =>
+                    setState(() => _selectedChoreIcon = value!),
+                items: AppConstants.choreIconNames
+                    .map((icon) =>
+                        DropdownMenuItem(value: icon, child: Text(icon)))
+                    .toList(),
+              ),
             ),
-            IconButton(icon: const Icon(Icons.add), onPressed: _addChore),
+            IconButton(
+              icon: Icon(Icons.add_circle, color: AppConstants.primaryPink),
+              onPressed: _addChore,
+            ),
           ],
         ),
         if (_choreTasks.isNotEmpty)
-          ..._choreTasks.map(
-            (task) => ListTile(
-              leading: Icon(AppConstants.choreIcons[task.iconName],
-                  color: AppConstants.primaryPink),
-              title: Text(task.title),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete, color: AppConstants.primaryPink),
-                onPressed: () => _removeChore(task),
-              ),
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _choreTasks.length,
+              separatorBuilder: (context, index) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final task = _choreTasks[index];
+                return ListTile(
+                  leading: Icon(AppConstants.choreIcons[task.iconName],
+                      color: AppConstants.primaryPink),
+                  title: Text(task.title),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete,
+                        color: AppConstants.primaryPink),
+                    onPressed: () => _removeChore(task),
+                  ),
+                );
+              },
             ),
           ),
       ],
     );
   }
 
-  /// Builds the study input section.
   Widget _buildStudySection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 20),
         _buildSectionTitle('Study'),
         Row(
           children: [
             Expanded(
               child: TextField(
                 controller: _studyController,
-                decoration: const InputDecoration(hintText: 'Enter study task'),
+                decoration: InputDecoration(
+                  hintText: 'Enter study task',
+                  filled: true,
+                  fillColor: Colors.grey[50],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppConstants.primaryPink),
+                  ),
+                ),
               ),
             ),
-            IconButton(icon: const Icon(Icons.add), onPressed: _addStudy),
+            IconButton(
+              icon: Icon(Icons.add_circle, color: AppConstants.primaryPink),
+              onPressed: _addStudy,
+            ),
           ],
         ),
         if (_studyTasks.isNotEmpty)
-          ..._studyTasks.map(
-            (task) => ListTile(
-              title: Text(task.title),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete, color: AppConstants.primaryPink),
-                onPressed: () => _removeStudy(task),
-              ),
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _studyTasks.length,
+              separatorBuilder: (context, index) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final task = _studyTasks[index];
+                return ListTile(
+                  leading:
+                      const Icon(Icons.book, color: AppConstants.primaryPink),
+                  title: Text(task.title),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete,
+                        color: AppConstants.primaryPink),
+                    onPressed: () => _removeStudy(task),
+                  ),
+                );
+              },
             ),
           ),
       ],
     );
   }
 
-  /// Builds the reduce points section.
   Widget _buildReducePointsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 20),
         _buildSectionTitle('Reduce Points'),
         Row(
           children: [
@@ -619,63 +869,130 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
                 keyboardType: TextInputType.number,
                 onChanged: (value) => _reducePoints = int.tryParse(value) ?? 0,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration:
-                    const InputDecoration(hintText: 'Enter points to reduce'),
+                decoration: InputDecoration(
+                  hintText: 'Enter points to reduce',
+                  filled: true,
+                  fillColor: Colors.grey[50],
+                  prefixIcon: const Icon(Icons.remove_circle_outline,
+                      color: Colors.red),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppConstants.primaryPink),
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: 10),
-            ElevatedButton(
-                onPressed: _reduceKidPoints, child: const Text('Reduce')),
+            ElevatedButton.icon(
+              onPressed: _reduceKidPoints,
+              style: ElevatedButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.remove),
+              label: const Text('Reduce'),
+            ),
           ],
         ),
       ],
     );
   }
 
-  /// Builds the redemption requests section.
   Widget _buildRedemptionRequestsSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 20),
         _buildSectionTitle('Redemption Requests'),
         if (_redemptionRequests.isEmpty)
-          const Text('No pending requests', style: AppConstants.bodyTextStyle)
+          Container(
+            padding: const EdgeInsets.all(16),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: const Text(
+              'No pending requests',
+              style: AppConstants.bodyTextStyle,
+            ),
+          )
         else
-          ..._redemptionRequests
-              .where(
-                  (request) => _kids.any((kid) => kid.id == request['kidId']))
-              .map(
-                (request) => ListTile(
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              separatorBuilder: (context, index) => const Divider(height: 1),
+              itemCount: _redemptionRequests
+                  .where((request) =>
+                      _kids.any((kid) => kid.id == request['kidId']))
+                  .length,
+              itemBuilder: (context, index) {
+                final request = _redemptionRequests
+                    .where((request) =>
+                        _kids.any((kid) => kid.id == request['kidId']))
+                    .toList()[index];
+                return ListTile(
+                  leading: const Icon(Icons.card_giftcard,
+                      color: AppConstants.primaryPink),
                   title: Text(
-                      '${request['kidName']}: ${request['request']} (${request['points']} points)'),
+                    '${request['kidName']}: ${request['request']}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text('${request['points']} points'),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.check, color: Colors.green),
+                        icon:
+                            const Icon(Icons.check_circle, color: Colors.green),
                         onPressed: () =>
                             _handleRedemptionRequest(request, true),
+                        tooltip: 'Approve',
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close, color: Colors.red),
+                        icon: const Icon(Icons.cancel, color: Colors.red),
                         onPressed: () =>
                             _handleRedemptionRequest(request, false),
+                        tooltip: 'Reject',
                       ),
                     ],
                   ),
-                ),
-              ),
+                );
+              },
+            ),
+          ),
       ],
     );
   }
 
-  /// Builds the save button with a custom label.
   Widget _buildSaveButton(String label) {
     return Center(
-      child: ElevatedButton(
+      child: ElevatedButton.icon(
         onPressed: _saveSetup,
-        child: Text(label),
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+          backgroundColor: AppConstants.primaryPink,
+          foregroundColor: Colors.white,
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        icon: const Icon(Icons.save),
+        label: Text(label),
       ),
     );
   }
