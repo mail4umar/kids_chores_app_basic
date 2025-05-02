@@ -145,15 +145,51 @@ class _KidDashboardState extends State<KidDashboard>
                     ? _prayerPoints
                     : _studyPoints);
 
+        bool showCongrats = false;
+        String congratsMessage = '';
+
         if (task.category == AppConstants.choreCategory) {
           _choreDailyAchieved += completed ? 1 : -1;
           _choreWeeklyAchieved += completed ? 1 : -1;
+          if (completed) {
+            if (_choreDailyAchieved == _choreDailyTarget &&
+                _choreDailyTarget > 0) {
+              showCongrats = true;
+              congratsMessage = 'Daily Chores Completed!';
+            } else if (_choreWeeklyAchieved == _choreWeeklyTarget &&
+                _choreWeeklyTarget > 0) {
+              showCongrats = true;
+              congratsMessage = 'Weekly Chores Completed!';
+            }
+          }
         } else if (task.category == AppConstants.prayerCategory) {
           _prayerDailyAchieved += completed ? 1 : -1;
           _prayerWeeklyAchieved += completed ? 1 : -1;
+          if (completed) {
+            if (_prayerDailyAchieved == _prayerDailyTarget &&
+                _prayerDailyTarget > 0) {
+              showCongrats = true;
+              congratsMessage = 'Daily Prayers Completed!';
+            } else if (_prayerWeeklyAchieved == _prayerWeeklyTarget &&
+                _prayerWeeklyTarget > 0) {
+              showCongrats = true;
+              congratsMessage = 'Weekly Prayers Completed!';
+            }
+          }
         } else if (task.category == AppConstants.studyCategory) {
           _studyDailyAchieved += completed ? 1 : -1;
           _studyWeeklyAchieved += completed ? 1 : -1;
+          if (completed) {
+            if (_studyDailyAchieved == _studyDailyTarget &&
+                _studyDailyTarget > 0) {
+              showCongrats = true;
+              congratsMessage = 'Daily Study Completed!';
+            } else if (_studyWeeklyAchieved == _studyWeeklyTarget &&
+                _studyWeeklyTarget > 0) {
+              showCongrats = true;
+              congratsMessage = 'Weekly Study Completed!';
+            }
+          }
         }
         _points += pointsChange;
         _points = _points.clamp(0, double.infinity).toInt();
@@ -183,18 +219,19 @@ class _KidDashboardState extends State<KidDashboard>
         });
 
         _dataService.updateTask(taskList[index]);
-        if (completed) {
-          _showCongratulationDialog(task);
+
+        if (showCongrats) {
+          _showCongratulationDialog(task, congratsMessage);
         }
       }
     });
   }
 
-  void _showCongratulationDialog(Task task) {
+  void _showCongratulationDialog(Task task, String message) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Yay!', style: AppConstants.subheadingTextStyle),
+        title: Text(message, style: AppConstants.subheadingTextStyle),
         content: CongratulatoryWidget(task: task),
         actions: [
           TextButton(
