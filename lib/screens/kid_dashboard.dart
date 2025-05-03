@@ -6,6 +6,7 @@ import '../widgets/task_tile.dart';
 import '../widgets/congratulatory_widget.dart';
 import '../utils/constants.dart';
 import 'package:flutter/services.dart';
+import 'dart:math';
 
 class KidDashboard extends StatefulWidget {
   final User user;
@@ -149,8 +150,11 @@ class _KidDashboardState extends State<KidDashboard>
         String congratsMessage = '';
 
         if (task.category == AppConstants.choreCategory) {
-          _choreDailyAchieved += completed ? 1 : -1;
-          _choreWeeklyAchieved += completed ? 1 : -1;
+          // Prevent negative values by using max(0, value)
+          _choreDailyAchieved =
+              max(0, _choreDailyAchieved + (completed ? 1 : -1));
+          _choreWeeklyAchieved =
+              max(0, _choreWeeklyAchieved + (completed ? 1 : -1));
           if (completed) {
             if (_choreDailyAchieved == _choreDailyTarget &&
                 _choreDailyTarget > 0) {
@@ -163,8 +167,11 @@ class _KidDashboardState extends State<KidDashboard>
             }
           }
         } else if (task.category == AppConstants.prayerCategory) {
-          _prayerDailyAchieved += completed ? 1 : -1;
-          _prayerWeeklyAchieved += completed ? 1 : -1;
+          // Prevent negative values by using max(0, value)
+          _prayerDailyAchieved =
+              max(0, _prayerDailyAchieved + (completed ? 1 : -1));
+          _prayerWeeklyAchieved =
+              max(0, _prayerWeeklyAchieved + (completed ? 1 : -1));
           if (completed) {
             if (_prayerDailyAchieved == _prayerDailyTarget &&
                 _prayerDailyTarget > 0) {
@@ -177,8 +184,11 @@ class _KidDashboardState extends State<KidDashboard>
             }
           }
         } else if (task.category == AppConstants.studyCategory) {
-          _studyDailyAchieved += completed ? 1 : -1;
-          _studyWeeklyAchieved += completed ? 1 : -1;
+          // Prevent negative values by using max(0, value)
+          _studyDailyAchieved =
+              max(0, _studyDailyAchieved + (completed ? 1 : -1));
+          _studyWeeklyAchieved =
+              max(0, _studyWeeklyAchieved + (completed ? 1 : -1));
           if (completed) {
             if (_studyDailyAchieved == _studyDailyTarget &&
                 _studyDailyTarget > 0) {
