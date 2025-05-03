@@ -23,6 +23,7 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
   final _studyController = TextEditingController();
   final _kidNameController = TextEditingController();
   final _reducePointsController = TextEditingController();
+  final _addPointsController = TextEditingController();
 
   String _pin = '1234';
   String _selectedAvatar = AppConstants.avatars[0];
@@ -43,6 +44,8 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
   int _prayerPoints = 1;
   int _studyPoints = 2;
   int _reducePoints = 0;
+  int _addPoints = 0;
+  bool _isAddingPoints = true;
 
   @override
   void initState() {
@@ -56,6 +59,7 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
     _studyController.dispose();
     _kidNameController.dispose();
     _reducePointsController.dispose();
+    _addPointsController.dispose();
     super.dispose();
   }
 
@@ -269,6 +273,36 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
     );
   }
 
+  Future<void> _addKidPoints() async {
+    if (_selectedKid == null || _addPoints <= 0) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Please select a kid and enter valid points')),
+      );
+      return;
+    }
+
+    final settings = await _dataService.fetchSettings();
+    final currentPoints = settings['${_selectedKid!.id}_points'] ?? 0;
+    final newPoints = currentPoints + _addPoints;
+
+    settings['${_selectedKid!.id}_points'] = newPoints;
+    await _dataService.saveSettings(settings);
+
+    setState(() {
+      _addPointsController.clear();
+      _addPoints = 0;
+    });
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+          content: Text(
+              'Added $_addPoints points to ${_selectedKid!.name}\'s account')),
+    );
+  }
+
   Future<void> _saveSetup() async {
     if (widget.addKidMode) {
       if (_kidNameController.text.isEmpty) {
@@ -439,7 +473,7 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
                     const SizedBox(height: 16),
                     _buildSectionCard(
                       title: 'Point Management',
-                      content: _buildReducePointsSection(),
+                      content: _buildPointManagementSection(),
                     ),
                     const SizedBox(height: 16),
                     _buildSectionCard(
@@ -852,54 +886,128 @@ class _ParentSetupScreenState extends State<ParentSetupScreen> {
     );
   }
 
-  Widget _buildReducePointsSection() {
+  Widget _buildPointManagementSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Reduce Points'),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _reducePointsController,
-                keyboardType: TextInputType.number,
-                onChanged: (value) => _reducePoints = int.tryParse(value) ?? 0,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: InputDecoration(
-                  hintText: 'Enter points to reduce',
-                  filled: true,
-                  fillColor: Colors.grey[50],
-                  prefixIcon: const Icon(Icons.remove_circle_outline,
-                      color: Colors.red),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: AppConstants.primaryPink),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            ElevatedButton.icon(
-              onPressed: _reduceKidPoints,
-              style: ElevatedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              icon: const Icon(Icons.remove),
-              label: const Text('Reduce'),
-            ),
-          ],
+        const Text(
+          'Manage kid\'s points',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         ),
+        const SizedBox(height: 10),
+        if (_kids.isEmpty)
+          const Text('Add a kid first to manage points')
+        else
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildKidDropdown(),
+              const SizedBox(height: 12),
+
+              // Points mode toggle
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _isAddingPoints = true;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _isAddingPoints
+                            ? AppConstants.primaryGreen
+                            : Colors.grey.shade300,
+                        foregroundColor:
+                            _isAddingPoints ? Colors.white : Colors.black87,
+                      ),
+                      child: const Text('Add Points'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _isAddingPoints = false;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: !_isAddingPoints
+                            ? Colors.redAccent
+                            : Colors.grey.shade300,
+                        foregroundColor:
+                            !_isAddingPoints ? Colors.white : Colors.black87,
+                      ),
+                      child: const Text('Reduce Points'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Points input field
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _isAddingPoints
+                          ? _addPointsController
+                          : _reducePointsController,
+                      decoration: InputDecoration(
+                        hintText: _isAddingPoints
+                            ? 'Enter points to add'
+                            : 'Enter points to reduce',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        prefixIcon: Icon(
+                          _isAddingPoints
+                              ? Icons.add_circle_outline
+                              : Icons.remove_circle_outline,
+                          color: _isAddingPoints
+                              ? AppConstants.primaryGreen
+                              : Colors.redAccent,
+                        ),
+                      ),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      onChanged: (value) {
+                        setState(() {
+                          if (_isAddingPoints) {
+                            _addPoints = int.tryParse(value) ?? 0;
+                          } else {
+                            _reducePoints = int.tryParse(value) ?? 0;
+                          }
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  ElevatedButton(
+                    onPressed:
+                        _isAddingPoints ? _addKidPoints : _reduceKidPoints,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _isAddingPoints
+                          ? AppConstants.primaryGreen
+                          : Colors.redAccent,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 16,
+                      ),
+                    ),
+                    child: Text(
+                      _isAddingPoints ? 'Add' : 'Reduce',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
       ],
     );
   }

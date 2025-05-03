@@ -7,6 +7,7 @@ class AppConstants {
   static const Color backgroundPink = Color(0xFFFFF0F5);
   static const Color lightPink = Color(0xFFFFDDE1);
   static const Color textDark = Color(0xFF4A4A4A);
+  static const Color primaryGreen = Color(0xFF4CAF50);
 
   static const double defaultPadding = 16.0;
 
