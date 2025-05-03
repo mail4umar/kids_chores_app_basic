@@ -351,12 +351,20 @@ class _KidDashboardState extends State<KidDashboard>
       _studyDailyAchieved = 0;
     });
 
-    // FIX: Only update progress for this kid, not settings
+    // Update progress counters in storage
     await _dataService.saveProgress(widget.user.id, {
       '${widget.user.id}_choreDailyAchieved': 0,
       '${widget.user.id}_prayerDailyAchieved': 0,
       '${widget.user.id}_studyDailyAchieved': 0,
     });
+
+    // Reset task completion status using the new DataService method
+    final success = await _dataService.resetTasksForKid(widget.user.id);
+
+    if (success) {
+      // Reload tasks to get the updated completion status
+      await _loadData();
+    }
   }
 
   Future<void> _checkAndResetWeekly() async {

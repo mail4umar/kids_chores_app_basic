@@ -375,4 +375,53 @@ class DataService {
     await prefs.setInt(fullKey, value);
     debugPrint('DataService: Updated progress item $fullKey to $value');
   }
+
+  Future<bool> resetTasksForKid(String kidId) async {
+    try {
+      // Fetch all tasks
+      final tasks = await fetchTasks();
+
+      // Find tasks for this kid and reset their completion status
+      bool tasksUpdated = false;
+
+      for (int i = 0; i < tasks.length; i++) {
+        final task = tasks[i];
+
+        // Only reset tasks for this specific kid
+        if (task.id.startsWith('${kidId}_')) {
+          // Only update if it's currently completed
+          if (task.isCompleted) {
+            tasks[i] = Task(
+              id: task.id,
+              title: task.title,
+              description: task.description,
+              category: task.category,
+              isCompleted: false,
+              iconName: task.iconName,
+              completedAt: null,
+            );
+            tasksUpdated = true;
+          }
+        }
+      }
+
+      // Only save if there were changes
+      if (tasksUpdated) {
+        // Save all tasks at once (more efficient than one by one)
+        final success = await _saveWithRetry(
+            _tasksKey,
+            jsonEncode(tasks.map((t) => t.toJson()).toList()),
+            'tasks with reset completion status');
+
+        debugPrint(
+            'DataService: ${success ? 'Successfully' : 'Failed to'} reset task completion status for kid: $kidId');
+        return success;
+      }
+
+      return true; // Nothing needed to be updated
+    } catch (e) {
+      debugPrint('DataService: Error resetting task completion status: $e');
+      return false;
+    }
+  }
 }
